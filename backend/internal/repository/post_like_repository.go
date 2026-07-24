@@ -53,8 +53,8 @@ func (r PostLikeRepository) CreateLike(likedUserID uint, postID uint, db *gorm.D
 	return nil
 }
 
-func (r PostLikeRepository) DeleteLike(likedUserID uint, db *gorm.DB) *delivery.APIError {
-	result := db.Delete("liked_user_id = ?", likedUserID)
+func (r PostLikeRepository) DeleteLike(likedUserID, postID uint, db *gorm.DB) *delivery.APIError {
+	result := db.Model(&model.PostLike{}).Delete("liked_user_id = ? AND post_id = ?", likedUserID, postID)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
 			return &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}

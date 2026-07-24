@@ -45,16 +45,14 @@ func (r PostRepository) GetByID(postID uint, db *gorm.DB) (*model.Post, *deliver
 
 	result := db.First(&post, "id = ?", postID)
 	if result.Error != nil {
-		if result.Error != nil {
-			if errors.Is(result.Error, context.DeadlineExceeded) {
-				return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
-			}
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return nil, &delivery.APIError{Code: constants.NotFound, Message: "post not found"}
-			}
-
-			return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding post by id"}
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, &delivery.APIError{Code: constants.NotFound, Message: "post not found"}
+		}
+
+		return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding post by id"}
 	}
 
 	return &post, nil
@@ -65,16 +63,14 @@ func (r PostRepository) GetAll(userID uint, db *gorm.DB) ([]model.Post, *deliver
 
 	result := db.Find(&posts, "creator_id = ?", userID)
 	if result.Error != nil {
-		if result.Error != nil {
-			if errors.Is(result.Error, context.DeadlineExceeded) {
-				return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
-			}
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return nil, &delivery.APIError{Code: constants.NotFound, Message: "posts not found"}
-			}
-
-			return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding posts by user id"}
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, &delivery.APIError{Code: constants.NotFound, Message: "posts not found"}
+		}
+
+		return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding posts by user id"}
 	}
 
 	return posts, nil
@@ -90,13 +86,11 @@ func (r PostRepository) IncrementLikes(postID uint, db *gorm.DB) (int, *delivery
 		Scan(&likes)
 
 	if result.Error != nil {
-		if result.Error != nil {
-			if errors.Is(result.Error, context.DeadlineExceeded) {
-				return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
-			}
-
-			return 0, &delivery.APIError{Code: constants.UpdateError, Message: "error during increment likes on post"}
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
+
+		return 0, &delivery.APIError{Code: constants.UpdateError, Message: "error during increment likes on post"}
 	}
 
 	if result.RowsAffected == 0 {
