@@ -33,7 +33,7 @@ func (c *GormClient) Setup() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Post{}, &model.Commentary{}, &model.PostLike{}); err != nil {
 		log.Fatal(err)
 	}
 
