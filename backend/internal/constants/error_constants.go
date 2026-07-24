@@ -18,5 +18,6 @@ const (
 	CreateError    = "CREATE_ERROR"
 
 	//service errors
-	ParseError = "PARSE_ERROR"
+	ParseError       = "PARSE_ERROR"
+	TransactionError = "TRANSACTION_ERROR"
 )

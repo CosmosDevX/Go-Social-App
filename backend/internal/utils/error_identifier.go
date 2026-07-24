@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func IdentifyRepositoryError(code string) int {
+func IdentifyAPIError(code string) int {
 	switch code {
 	case constants.NotFound:
 		return http.StatusNotFound

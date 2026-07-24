@@ -12,30 +12,23 @@ import (
 )
 
 type PostRepositoryInterface interface {
-	CreatePost(postDTO dto.PostDTO, ctx context.Context) (uint, *delivery.APIError)
-	GetPostByID(postID uint, ctx context.Context) (*model.Post, *delivery.APIError)
-	IncrementLikes(postID uint, ctx context.Context) (int, *delivery.APIError)
-	DecrementLikes(postID uint, ctx context.Context) (int, *delivery.APIError)
+	Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *delivery.APIError)
+	GetByID(postID uint, db *gorm.DB) (*model.Post, *delivery.APIError)
+	GetAll(userID uint, db *gorm.DB) ([]model.Post, *delivery.APIError)
+	IncrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
+	DecrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
 }
 
-type PostRepository struct {
-	db *gorm.DB
-}
+type PostRepository struct{}
 
-func NewPostRepository(db *gorm.DB) PostRepositoryInterface {
-	return PostRepository{
-		db: db,
-	}
-}
-
-func (r PostRepository) CreatePost(postDTO dto.PostDTO, ctx context.Context) (uint, *delivery.APIError) {
+func (r PostRepository) Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *delivery.APIError) {
 	post := model.Post{
 		PostName:        postDTO.PostName,
 		PostDescription: postDTO.PostDescription,
 		CreatorID:       postDTO.CreatorID,
 	}
 
-	result := r.db.WithContext(ctx).Create(&post)
+	result := db.Create(&post)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
 			return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -47,10 +40,10 @@ func (r PostRepository) CreatePost(postDTO dto.PostDTO, ctx context.Context) (ui
 	return post.ID, nil
 }
 
-func (r PostRepository) GetPostByID(postID uint, ctx context.Context) (*model.Post, *delivery.APIError) {
+func (r PostRepository) GetByID(postID uint, db *gorm.DB) (*model.Post, *delivery.APIError) {
 	var post model.Post
 
-	result := r.db.WithContext(ctx).First(&post, "id = ?", postID)
+	result := db.First(&post, "id = ?", postID)
 	if result.Error != nil {
 		if result.Error != nil {
 			if errors.Is(result.Error, context.DeadlineExceeded) {
@@ -67,9 +60,30 @@ func (r PostRepository) GetPostByID(postID uint, ctx context.Context) (*model.Po
 	return &post, nil
 }
 
-func (r PostRepository) IncrementLikes(postID uint, ctx context.Context) (int, *delivery.APIError) {
+func (r PostRepository) GetAll(userID uint, db *gorm.DB) ([]model.Post, *delivery.APIError) {
+	var posts []model.Post
+
+	result := db.Find(&posts, "creator_id = ?", userID)
+	if result.Error != nil {
+		if result.Error != nil {
+			if errors.Is(result.Error, context.DeadlineExceeded) {
+				return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			}
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return nil, &delivery.APIError{Code: constants.NotFound, Message: "posts not found"}
+			}
+
+			return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding posts by user id"}
+		}
+	}
+
+	return posts, nil
+}
+
+func (r PostRepository) IncrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError) {
 	var likes int
-	result := r.db.WithContext(ctx).Model(&model.Post{}).
+
+	result := db.Model(&model.Post{}).
 		Where("id = ?", postID).
 		Update("likes", gorm.Expr("likes + ?", 1)).
 		Select("likes").
@@ -92,9 +106,9 @@ func (r PostRepository) IncrementLikes(postID uint, ctx context.Context) (int, *
 	return likes, nil
 }
 
-func (r PostRepository) DecrementLikes(postID uint, ctx context.Context) (int, *delivery.APIError) {
+func (r PostRepository) DecrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError) {
 	var likes int
-	result := r.db.WithContext(ctx).Model(&model.Post{}).
+	result := db.Model(&model.Post{}).
 		Where("id = ?", postID).
 		Update("likes", gorm.Expr("likes - ?", 1)).
 		Select("likes").

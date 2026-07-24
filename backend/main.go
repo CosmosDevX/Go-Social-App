@@ -24,26 +24,34 @@ func main() {
 
 	//initialize repositories
 	userRepository := repository.NewUserRepository(gormClient.GetDB())
+	postRepository := repository.PostRepository{}
+	postLikeRepository := repository.PostLikeRepository{}
 	refreshTokenRepository := repository.NewRefreshTokenRepository(redisClient.GetClient())
 
 	//initialize services
 	jwtService := authorization.NewJWTService()
 	authService := authorization.NewAuthService(userRepository, refreshTokenRepository, jwtService)
 	userService := service.NewUserService(userRepository)
+	postService := service.NewPostService(postRepository, postLikeRepository, gormClient.GetDB())
 
 	//initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService)
+	postHandler := handler.NewPostHandler(postService)
 
 	//initialize middlewares
-	//authMiddleware := middleware.NewAuthMiddleware(jwtService)
+	authMiddleware := middleware.NewAuthMiddleware(jwtService)
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /auth", authHandler.AuthHandler)
 	mux.HandleFunc("POST /refresh", authHandler.RefreshHandler)
 
-	mux.HandleFunc("POST /user/create", userHandler.CreateUserHandler)
+	mux.HandleFunc("POST /user/create", userHandler.HandleCreateUser)
+
+	mux.HandleFunc("POST /post/create", authMiddleware.Protect(postHandler.HandleCreatePost))
+	mux.HandleFunc("POST /post/like/{post_id}", authMiddleware.Protect(postHandler.HandleLikePost))
+	mux.HandleFunc("GET /post/all", authMiddleware.Protect(postHandler.HandleGetUserPosts))
 
 	httpService := service.NewHTTPService(http.TimeoutHandler(middleware.CorsMiddleware(mux), time.Minute, "request timeout"))
 

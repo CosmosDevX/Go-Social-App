@@ -17,7 +17,7 @@ func NewUserHandler(userService service.UserServiceInterface) UserHandler {
 	}
 }
 
-func (h UserHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	var userDTO dto.UserDTO
 	if err := utils.Deserialize(r.Body, &userDTO); err != nil {
 		http.Error(w, "error during deserializing body", http.StatusBadRequest)
@@ -32,7 +32,7 @@ func (h UserHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := h.userService.CreateUser(&userDTO, r.Context())
 	if err != nil {
-		http.Error(w, err.Message, utils.IdentifyRepositoryError(err.Code))
+		http.Error(w, err.Message, utils.IdentifyAPIError(err.Code))
 		return
 	}
 

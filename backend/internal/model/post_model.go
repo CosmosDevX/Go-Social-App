@@ -1,6 +1,10 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"myapp/internal/delivery/http/dto"
+
+	"gorm.io/gorm"
+)
 
 type Post struct {
 	gorm.Model
@@ -9,4 +13,14 @@ type Post struct {
 	CreatorID       uint   `gorm:"index"`
 	Creator         User   `gorm:"foreignKey: CreatorID; references: ID"`
 	Likes           int    `gorm:"type: INTEGER"`
+}
+
+func (p Post) ToPostDTO() dto.PostDTO {
+	return dto.PostDTO{
+		PostID:          p.ID,
+		PostName:        p.PostName,
+		PostDescription: p.PostDescription,
+		CreatorID:       p.CreatorID,
+		Likes:           p.Likes,
+	}
 }
