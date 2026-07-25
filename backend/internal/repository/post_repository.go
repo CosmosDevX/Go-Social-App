@@ -14,7 +14,8 @@ import (
 type PostRepositoryInterface interface {
 	Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *delivery.APIError)
 	GetByID(postID uint, db *gorm.DB) (*model.Post, *delivery.APIError)
-	GetAll(userID uint, db *gorm.DB) ([]model.Post, *delivery.APIError)
+	GetAllByID(userID uint, db *gorm.DB) ([]model.Post, *delivery.APIError)
+	GetAllByUsername(username string, db *gorm.DB) ([]model.Post, *delivery.APIError)
 	IncrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
 	DecrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
 }
@@ -58,7 +59,7 @@ func (r PostRepository) GetByID(postID uint, db *gorm.DB) (*model.Post, *deliver
 	return &post, nil
 }
 
-func (r PostRepository) GetAll(userID uint, db *gorm.DB) ([]model.Post, *delivery.APIError) {
+func (r PostRepository) GetAllByID(userID uint, db *gorm.DB) ([]model.Post, *delivery.APIError) {
 	var posts []model.Post
 
 	result := db.Find(&posts, "creator_id = ?", userID)
@@ -71,6 +72,27 @@ func (r PostRepository) GetAll(userID uint, db *gorm.DB) ([]model.Post, *deliver
 		}
 
 		return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding posts by user id"}
+	}
+
+	return posts, nil
+}
+
+func (r PostRepository) GetAllByUsername(username string, db *gorm.DB) ([]model.Post, *delivery.APIError) {
+	var posts []model.Post
+
+	result := db.Joins("JOIN users ON users.id = posts.creator_id").
+		Where("users.username = ?", username).
+		Find(&posts)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, &delivery.APIError{Code: constants.NotFound, Message: "posts not found"}
+		}
+
+		return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding posts by username"}
 	}
 
 	return posts, nil

@@ -54,7 +54,8 @@ func main() {
 	mux.HandleFunc("POST /post/create", authMiddleware.Protect(postHandler.HandleCreatePost))
 	mux.HandleFunc("POST /post/like/{post_id}", authMiddleware.Protect(postHandler.HandleLikePost))
 	mux.HandleFunc("POST /post/dislike/{post_id}", authMiddleware.Protect(postHandler.HandleDislikePost))
-	mux.HandleFunc("GET /post/all", authMiddleware.Protect(postHandler.HandleGetUserPosts))
+	mux.HandleFunc("GET /post/current_user/all", authMiddleware.Protect(postHandler.HandleGetCurrentUserPosts))
+	mux.HandleFunc("GET /post/{username}/all", authMiddleware.Protect(postHandler.HandleGetUserPostsByUsername))
 
 	httpService := service.NewHTTPService(http.TimeoutHandler(middleware.CorsMiddleware(mux), time.Minute, "request timeout"))
 

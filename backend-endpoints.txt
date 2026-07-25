@@ -45,7 +45,8 @@ response: if success - likes: likesNumber
 пост, если он не лайкал данный пост, и если он лайкнул пост, может снять лайк.
 Т.е есть только кнопка лайка
 
-GET /post/all
+GET /post/current_user/all
+Для отображения постов текущего пользователя
 response: if success:
 [
     {
@@ -54,5 +55,22 @@ response: if success:
         "post_description": postDescription,
         "creator_id": creatorId,
         "likes": likesNumber,
-    }
+        "is_liked": boolean
+    }, 
 ]
+
+GET /post/{username}/all
+Для отображения постов другого пользователя
+response: if success:
+[
+    {
+        "post_id": postId,
+        "post_name": postName,
+        "post_description": postDescription,
+        "creator_id": creatorId,
+        "likes": likesNumber,
+        "is_liked": boolean
+    }, 
+]
+
+is_liked нужен, чтобы фронт могу проставить на посте визуально лайк, после перезагрузки страницы, например.

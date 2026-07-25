@@ -2,12 +2,10 @@ package model
 
 import (
 	"myapp/internal/delivery/http/dto"
-
-	"gorm.io/gorm"
 )
 
 type Post struct {
-	gorm.Model
+	ID              uint
 	PostName        string `gorm:"type: VARCHAR(100)"`
 	PostDescription string `gorm:"type: VARCHAR(900)"`
 	CreatorID       uint   `gorm:"index"`

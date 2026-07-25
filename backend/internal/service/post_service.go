@@ -5,19 +5,20 @@ import (
 	"myapp/internal/constants"
 	"myapp/internal/delivery"
 	"myapp/internal/delivery/http/dto"
-	"myapp/internal/delivery/http/middleware"
+	"myapp/internal/model"
 	"myapp/internal/repository"
-	"myapp/internal/utils"
+	"slices"
 
 	"gorm.io/gorm"
 )
 
 type PostServiceInterface interface {
-	CreatePost(postDTO dto.PostDTO, ctx context.Context) (uint, *delivery.APIError)
+	CreatePost(postDTO dto.PostDTO, creatorID uint, ctx context.Context) (uint, *delivery.APIError)
 	GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *delivery.APIError)
-	GetAllUserPosts(ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
-	LikePost(postID uint, ctx context.Context) (int, *delivery.APIError)
-	DislikePost(postID uint, ctx context.Context) (int, *delivery.APIError)
+	GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
+	GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
+	LikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError)
+	DislikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError)
 }
 
 type PostService struct {
@@ -34,13 +35,8 @@ func NewPostService(postRepository repository.PostRepositoryInterface, postLikeR
 	}
 }
 
-func (s PostService) CreatePost(postDTO dto.PostDTO, ctx context.Context) (uint, *delivery.APIError) {
-	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
-	if parseErr != nil {
-		return 0, &delivery.APIError{Code: constants.ParseError, Message: parseErr.Error()}
-	}
-
-	postDTO.CreatorID = parsedUserID
+func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID uint, ctx context.Context) (uint, *delivery.APIError) {
+	postDTO.CreatorID = creatorID
 	postID, apiErr := s.postRepository.Create(postDTO, s.db.WithContext(ctx))
 	if apiErr != nil {
 		return 0, apiErr
@@ -59,34 +55,50 @@ func (s PostService) GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO
 	return &dto, nil
 }
 
-func (s PostService) GetAllUserPosts(ctx context.Context) ([]dto.PostDTO, *delivery.APIError) {
-	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
-	if parseErr != nil {
-		return nil, &delivery.APIError{Code: constants.ParseError, Message: parseErr.Error()}
-	}
-
-	posts, err := s.postRepository.GetAll(parsedUserID, s.db.WithContext(ctx))
+func (s PostService) GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError) {
+	posts, err := s.postRepository.GetAllByID(userID, s.db.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
 
+	likedPostsID, apiErr := s.postLikeRepository.GetLikedPostsID(userID, s.db.WithContext(ctx))
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return s.makePostDTOs(posts, likedPostsID), nil
+}
+
+func (s PostService) GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError) {
+	posts, err := s.postRepository.GetAllByUsername(username, s.db.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	likedPostsID, apiErr := s.postLikeRepository.GetLikedPostsID(currentUserID, s.db.WithContext(ctx))
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	return s.makePostDTOs(posts, likedPostsID), nil
+}
+
+func (s PostService) makePostDTOs(posts []model.Post, likedPostsID []uint) []dto.PostDTO {
 	dtos := make([]dto.PostDTO, len(posts))
 	for i, post := range posts {
 		dtos[i] = post.ToPostDTO()
+		if slices.Contains(likedPostsID, dtos[i].PostID) {
+			dtos[i].IsLiked = true
+		}
 	}
 
-	return dtos, nil
+	return dtos
 }
 
-func (s PostService) LikePost(postID uint, ctx context.Context) (int, *delivery.APIError) {
-	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
-	if parseErr != nil {
-		return 0, &delivery.APIError{Code: constants.ParseError, Message: parseErr.Error()}
-	}
-
+func (s PostService) LikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError) {
 	dbWithCtx := s.db.WithContext(ctx)
 
-	result, apiErr := s.postLikeRepository.LikeExists(parsedUserID, postID, dbWithCtx)
+	result, apiErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
 	if apiErr != nil {
 		return 0, apiErr
 	}
@@ -105,7 +117,7 @@ func (s PostService) LikePost(postID uint, ctx context.Context) (int, *delivery.
 		return 0, apiErr
 	}
 
-	if apiErr := s.postLikeRepository.CreateLike(parsedUserID, postID, tx); apiErr != nil {
+	if apiErr := s.postLikeRepository.CreateLike(userID, postID, tx); apiErr != nil {
 		tx.Rollback()
 		return 0, apiErr
 	}
@@ -117,15 +129,10 @@ func (s PostService) LikePost(postID uint, ctx context.Context) (int, *delivery.
 	return likes, nil
 }
 
-func (s PostService) DislikePost(postID uint, ctx context.Context) (int, *delivery.APIError) {
-	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
-	if parseErr != nil {
-		return 0, &delivery.APIError{Code: constants.ParseError, Message: parseErr.Error()}
-	}
-
+func (s PostService) DislikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError) {
 	dbWithCtx := s.db.WithContext(ctx)
 
-	result, apiErr := s.postLikeRepository.LikeExists(parsedUserID, postID, dbWithCtx)
+	result, apiErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
 	if apiErr != nil {
 		return 0, apiErr
 	}
@@ -144,7 +151,7 @@ func (s PostService) DislikePost(postID uint, ctx context.Context) (int, *delive
 		return 0, apiErr
 	}
 
-	if apiErr := s.postLikeRepository.DeleteLike(parsedUserID, postID, tx); apiErr != nil {
+	if apiErr := s.postLikeRepository.DeleteLike(userID, postID, tx); apiErr != nil {
 		tx.Rollback()
 		return 0, apiErr
 	}

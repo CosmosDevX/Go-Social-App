@@ -14,9 +14,27 @@ type PostLikeRepositoryInterface interface {
 	CreateLike(likedUserID uint, postID uint, db *gorm.DB) *delivery.APIError
 	DeleteLike(likedUserID, postID uint, db *gorm.DB) *delivery.APIError
 	LikeExists(userID, postID uint, db *gorm.DB) (bool, *delivery.APIError)
+	GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *delivery.APIError)
 }
 
 type PostLikeRepository struct{}
+
+func (r PostLikeRepository) GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *delivery.APIError) {
+	var postIDs []uint
+
+	result := db.Model(&model.PostLike{}).
+		Where("liked_user_id = ?", userID).
+		Pluck("post_id", &postIDs)
+
+	if result.Error != nil {
+		return nil, &delivery.APIError{
+			Code:    constants.FindError,
+			Message: "error during finding liked post ids",
+		}
+	}
+
+	return postIDs, nil
+}
 
 func (r PostLikeRepository) LikeExists(userID, postID uint, db *gorm.DB) (bool, *delivery.APIError) {
 	var postLike model.PostLike
@@ -54,7 +72,7 @@ func (r PostLikeRepository) CreateLike(likedUserID uint, postID uint, db *gorm.D
 }
 
 func (r PostLikeRepository) DeleteLike(likedUserID, postID uint, db *gorm.DB) *delivery.APIError {
-	result := db.Model(&model.PostLike{}).Delete("liked_user_id = ? AND post_id = ?", likedUserID, postID)
+	result := db.Delete(&model.PostLike{}, "liked_user_id = ? AND post_id = ?", likedUserID, postID)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
 			return &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}

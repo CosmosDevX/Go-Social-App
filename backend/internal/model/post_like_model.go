@@ -1,9 +1,7 @@
 package model
 
-import "gorm.io/gorm"
-
 type PostLike struct {
-	gorm.Model
+	ID          uint
 	LikedUserID uint `gorm:"index"`
 	PostID      uint `gorm:"index"`
 	Post        Post `gorm:"foreignKey: PostID; references: ID"`
