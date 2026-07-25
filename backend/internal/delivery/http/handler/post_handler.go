@@ -69,3 +69,21 @@ func (h PostHandler) HandleLikePost(w http.ResponseWriter, r *http.Request) {
 
 	utils.WriteJSON(w, map[string]int{"likes": likes})
 }
+
+func (h PostHandler) HandleDislikePost(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	postID, parseErr := strconv.ParseUint(r.PathValue("post_id"), 10, 64)
+	if parseErr != nil {
+		http.Error(w, "error during parsing post id", http.StatusBadRequest)
+		return
+	}
+
+	likes, apiErr := h.postService.DislikePost(uint(postID), ctx)
+	if apiErr != nil {
+		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
+		return
+	}
+
+	utils.WriteJSON(w, map[string]int{"likes": likes})
+}

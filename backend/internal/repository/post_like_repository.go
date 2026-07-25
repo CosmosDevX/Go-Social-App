@@ -12,7 +12,7 @@ import (
 
 type PostLikeRepositoryInterface interface {
 	CreateLike(likedUserID uint, postID uint, db *gorm.DB) *delivery.APIError
-	DeleteLike(likedUserID uint, db *gorm.DB) *delivery.APIError
+	DeleteLike(likedUserID, postID uint, db *gorm.DB) *delivery.APIError
 	LikeExists(userID, postID uint, db *gorm.DB) (bool, *delivery.APIError)
 }
 

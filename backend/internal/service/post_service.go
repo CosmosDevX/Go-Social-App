@@ -18,6 +18,7 @@ type PostServiceInterface interface {
 	GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *delivery.APIError)
 	GetAllUserPosts(ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
 	LikePost(postID uint, ctx context.Context) (int, *delivery.APIError)
+	DislikePost(postID uint, ctx context.Context) (int, *delivery.APIError)
 }
 
 type PostService struct {
@@ -106,6 +107,45 @@ func (s PostService) LikePost(postID uint, ctx context.Context) (int, *delivery.
 	}
 
 	if apiErr := s.postLikeRepository.CreateLike(parsedUserID, postID, tx); apiErr != nil {
+		tx.Rollback()
+		return 0, apiErr
+	}
+
+	if tx.Commit().Error != nil {
+		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction commit failed"}
+	}
+
+	return likes, nil
+}
+
+func (s PostService) DislikePost(postID uint, ctx context.Context) (int, *delivery.APIError) {
+	parsedUserID, parseErr := s.parseUserID(ctx.Value(middleware.UserContextKey{}))
+	if parseErr != nil {
+		return 0, &delivery.APIError{Code: constants.ParseError, Message: parseErr.Error()}
+	}
+
+	dbWithCtx := s.db.WithContext(ctx)
+
+	result, apiErr := s.postLikeRepository.LikeExists(parsedUserID, postID, dbWithCtx)
+	if apiErr != nil {
+		return 0, apiErr
+	}
+	if !result {
+		return 0, &delivery.APIError{Code: constants.CreateError, Message: "user not liked this post"}
+	}
+
+	tx := dbWithCtx.Begin()
+	if tx.Error != nil {
+		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "error starting transaction"}
+	}
+
+	likes, apiErr := s.postRepository.DecrementLikes(postID, tx)
+	if apiErr != nil {
+		tx.Rollback()
+		return 0, apiErr
+	}
+
+	if apiErr := s.postLikeRepository.DeleteLike(parsedUserID, postID, tx); apiErr != nil {
 		tx.Rollback()
 		return 0, apiErr
 	}
