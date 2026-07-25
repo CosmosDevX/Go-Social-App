@@ -23,15 +23,15 @@ func main() {
 	redisClient := infrastructure.NewRedisClient()
 
 	//initialize repositories
-	userRepository := repository.NewUserRepository(gormClient.GetDB())
+	userRepository := repository.UserRepository{}
 	postRepository := repository.PostRepository{}
 	postLikeRepository := repository.PostLikeRepository{}
 	refreshTokenRepository := repository.NewRefreshTokenRepository(redisClient.GetClient())
 
 	//initialize services
 	jwtService := authorization.NewJWTService()
-	authService := authorization.NewAuthService(userRepository, refreshTokenRepository, jwtService)
-	userService := service.NewUserService(userRepository)
+	authService := authorization.NewAuthService(userRepository, refreshTokenRepository, jwtService, gormClient.GetDB())
+	userService := service.NewUserService(userRepository, gormClient.GetDB())
 	postService := service.NewPostService(postRepository, postLikeRepository, gormClient.GetDB())
 
 	//initialize handlers
@@ -48,6 +48,8 @@ func main() {
 	mux.HandleFunc("POST /refresh", authHandler.RefreshHandler)
 
 	mux.HandleFunc("POST /user/create", userHandler.HandleCreateUser)
+	mux.HandleFunc("GET /user/get_username_by_id/{user_id}", userHandler.HandleGetUsernameByID)
+	mux.HandleFunc("GET /user/current/profile", authMiddleware.Protect(userHandler.HandleCurrentUserProfile))
 
 	mux.HandleFunc("POST /post/create", authMiddleware.Protect(postHandler.HandleCreatePost))
 	mux.HandleFunc("POST /post/like/{post_id}", authMiddleware.Protect(postHandler.HandleLikePost))

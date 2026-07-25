@@ -1,0 +1,58 @@
+backend - localhost:8080
+CORS ENABLED
+
+authorization endpoints
+POST /auth
+body: username, password
+response: if success - access_token: token
+
+POST /refresh
+response: if success - access_token: token
+
+user endpoints
+POST /user/create
+body: username, password
+username cannot be bigger than 60 and lower than 3
+password cannot be bigger than 100 and lower than 10
+response: if success - user_id: id
+
+GET /user/current/profile
+requires auth headers: Bearer token
+response: if success - username: username
+
+GET /user/get_username_by_id/{user_id}
+response: if success - username: username
+Нужен, например для создания профиля другого пользователя
+
+post endpoints(all post endpoints protected by auth middleware
+and requires authorization header: Bearer token)
+
+POST /post/create
+body: post_name, post_description
+post name cannot be bigger than 100 and lower than 5
+post description cannot be bigger than 900 and lower than 1
+response: if success - post_id: id
+
+POST /post/like/{post_id}
+post_id - path value
+response: if success - likes: likesNumber
+
+POST /post/dislike/{post_id}
+post_id - path value
+response: if success - likes: likesNumber
+
+ВАЖНО! дизлайк = снятию лайка. Т.е, юзер может поставить лайк на
+пост, если он не лайкал данный пост, и если он лайкнул пост, может снять лайк.
+Т.е есть только кнопка лайка
+
+GET /post/all
+response: if success:
+[
+    {
+        "post_id": postId,
+        "post_name": postName,
+        "post_description": postDescription,
+        "creator_id": creatorId,
+        "likes": likesNumber,
+    }
+]

@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type AuthResult struct {
@@ -25,18 +26,20 @@ type AuthService struct {
 	userRepository         repository.UserRepositoryInterface
 	refreshTokenRepository repository.RefreshTokenRepositoryInterface
 	jwtService             JWTServiceInterface
+	db                     *gorm.DB
 }
 
-func NewAuthService(userRepo repository.UserRepositoryInterface, refreshTokenRepo repository.RefreshTokenRepositoryInterface, jwtService JWTServiceInterface) AuthServiceInterface {
+func NewAuthService(userRepo repository.UserRepositoryInterface, refreshTokenRepo repository.RefreshTokenRepositoryInterface, jwtService JWTServiceInterface, db *gorm.DB) AuthServiceInterface {
 	return AuthService{
 		userRepository:         userRepo,
 		refreshTokenRepository: refreshTokenRepo,
 		jwtService:             jwtService,
+		db:                     db,
 	}
 }
 
 func (s AuthService) Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult, *delivery.APIError) {
-	user, err := s.userRepository.GetUserByName(userDTO.Username, ctx)
+	user, err := s.userRepository.GetUserByName(userDTO.Username, s.db.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}

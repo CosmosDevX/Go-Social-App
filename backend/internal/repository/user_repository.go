@@ -13,23 +13,16 @@ import (
 )
 
 type UserRepositoryInterface interface {
-	GetUserByName(username string, ctx context.Context) (*model.User, *delivery.APIError)
-	CreateUser(userDTO dto.UserDTO, ctx context.Context) (uint, *delivery.APIError)
+	GetUserByName(username string, db *gorm.DB) (*model.User, *delivery.APIError)
+	CreateUser(userDTO dto.UserDTO, db *gorm.DB) (uint, *delivery.APIError)
+	GetUsernameByID(userID uint, db *gorm.DB) (string, *delivery.APIError)
 }
 
-type UserRepository struct {
-	db *gorm.DB
-}
+type UserRepository struct{}
 
-func NewUserRepository(db *gorm.DB) UserRepositoryInterface {
-	return UserRepository{
-		db: db,
-	}
-}
-
-func (r UserRepository) GetUserByName(username string, ctx context.Context) (*model.User, *delivery.APIError) {
+func (r UserRepository) GetUserByName(username string, db *gorm.DB) (*model.User, *delivery.APIError) {
 	var user model.User
-	result := r.db.WithContext(ctx).First(&user, "username = ?", username)
+	result := db.First(&user, "username = ?", username)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
 			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -44,9 +37,9 @@ func (r UserRepository) GetUserByName(username string, ctx context.Context) (*mo
 	return &user, nil
 }
 
-func (r UserRepository) CreateUser(userDTO dto.UserDTO, ctx context.Context) (uint, *delivery.APIError) {
+func (r UserRepository) CreateUser(userDTO dto.UserDTO, db *gorm.DB) (uint, *delivery.APIError) {
 	user := model.User{Username: userDTO.Username, Password: userDTO.Password}
-	result := r.db.WithContext(ctx).Create(&user)
+	result := db.Create(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
 			return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -56,4 +49,21 @@ func (r UserRepository) CreateUser(userDTO dto.UserDTO, ctx context.Context) (ui
 	}
 
 	return user.ID, nil
+}
+
+func (r UserRepository) GetUsernameByID(userID uint, db *gorm.DB) (string, *delivery.APIError) {
+	var username string
+	result := db.Model(&model.User{}).Where("id = ?", userID).Select("username").Scan(&username)
+	if result.Error != nil {
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return "", &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return "", &delivery.APIError{Code: constants.NotFound, Message: "username not found not found"}
+		}
+
+		return "", &delivery.APIError{Code: constants.FindError, Message: "error during find username by user id"}
+	}
+
+	return username, nil
 }

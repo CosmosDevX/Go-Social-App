@@ -2,13 +2,12 @@ package service
 
 import (
 	"context"
-	"errors"
 	"myapp/internal/constants"
 	"myapp/internal/delivery"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/repository"
-	"strconv"
+	"myapp/internal/utils"
 
 	"gorm.io/gorm"
 )
@@ -36,7 +35,7 @@ func NewPostService(postRepository repository.PostRepositoryInterface, postLikeR
 }
 
 func (s PostService) CreatePost(postDTO dto.PostDTO, ctx context.Context) (uint, *delivery.APIError) {
-	parsedUserID, parseErr := s.parseUserID(ctx.Value(middleware.UserContextKey{}))
+	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
 	if parseErr != nil {
 		return 0, &delivery.APIError{Code: constants.ParseError, Message: parseErr.Error()}
 	}
@@ -61,7 +60,7 @@ func (s PostService) GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO
 }
 
 func (s PostService) GetAllUserPosts(ctx context.Context) ([]dto.PostDTO, *delivery.APIError) {
-	parsedUserID, parseErr := s.parseUserID(ctx.Value(middleware.UserContextKey{}))
+	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
 	if parseErr != nil {
 		return nil, &delivery.APIError{Code: constants.ParseError, Message: parseErr.Error()}
 	}
@@ -80,7 +79,7 @@ func (s PostService) GetAllUserPosts(ctx context.Context) ([]dto.PostDTO, *deliv
 }
 
 func (s PostService) LikePost(postID uint, ctx context.Context) (int, *delivery.APIError) {
-	parsedUserID, parseErr := s.parseUserID(ctx.Value(middleware.UserContextKey{}))
+	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
 	if parseErr != nil {
 		return 0, &delivery.APIError{Code: constants.ParseError, Message: parseErr.Error()}
 	}
@@ -119,7 +118,7 @@ func (s PostService) LikePost(postID uint, ctx context.Context) (int, *delivery.
 }
 
 func (s PostService) DislikePost(postID uint, ctx context.Context) (int, *delivery.APIError) {
-	parsedUserID, parseErr := s.parseUserID(ctx.Value(middleware.UserContextKey{}))
+	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
 	if parseErr != nil {
 		return 0, &delivery.APIError{Code: constants.ParseError, Message: parseErr.Error()}
 	}
@@ -155,18 +154,4 @@ func (s PostService) DislikePost(postID uint, ctx context.Context) (int, *delive
 	}
 
 	return likes, nil
-}
-
-func (s PostService) parseUserID(ctxValue any) (uint, error) {
-	stringUserID, ok := ctxValue.(string)
-	if !ok {
-		return 0, errors.New("error during parsing userID to string")
-	}
-
-	userID, err := strconv.ParseUint(stringUserID, 10, 64)
-	if err != nil {
-		return 0, errors.New("error during parsing userID to uint")
-	}
-
-	return uint(userID), nil
 }

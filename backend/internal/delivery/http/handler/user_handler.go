@@ -38,3 +38,23 @@ func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	utils.WriteJSON(w, map[string]uint{"user_id": id})
 }
+
+func (h UserHandler) HandleCurrentUserProfile(w http.ResponseWriter, r *http.Request) {
+	username, apiErr := h.userService.CurrentUserProfile(r.Context())
+	if apiErr != nil {
+		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
+		return
+	}
+
+	utils.WriteJSON(w, map[string]string{"username": username})
+}
+
+func (h UserHandler) HandleGetUsernameByID(w http.ResponseWriter, r *http.Request) {
+	username, apiErr := h.userService.GetUsernameByID(r.PathValue("user_id"), r.Context())
+	if apiErr != nil {
+		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
+		return
+	}
+
+	utils.WriteJSON(w, map[string]string{"username": username})
+}
