@@ -67,6 +67,7 @@ func main() {
 
 	mux.HandleFunc("POST /comment/create/{post_id}", authMiddleware.Protect(commentHandler.HandleCreateComment))
 	mux.HandleFunc("GET /comment/all/{post_id}", authMiddleware.Protect(commentHandler.HandleGetAllCommentsOnPost))
+	mux.HandleFunc("DELETE /comment/{comment_id}", authMiddleware.Protect(commentHandler.HandleDeleteComment))
 
 	httpService := service.NewHTTPService(http.TimeoutHandler(middleware.CorsMiddleware(mux), time.Minute, "request timeout"))
 

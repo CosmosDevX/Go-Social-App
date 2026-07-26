@@ -1,23 +1,29 @@
 import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Post, likePost, dislikePost } from '../api/post'
-import { Comment, createComment, getCommentsByPostId } from '../api/comment'
+import { Post, likePost, dislikePost, deletePost } from '../api/post'
+import { Comment, createComment, getCommentsByPostId, deleteComment } from '../api/comment'
 import { getErrorMessage } from '../api/client'
+import { useAuth } from '../context/AuthContext'
 
 interface PostCardProps {
   post: Post
   /** если не передан — берётся post.creator_name */
   authorUsername?: string
   onLikeChange?: (postId: number, likes: number, isLiked: boolean) => void
+  onPostDelete?: (postId: number) => void
 }
 
-export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) {
+export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: PostCardProps) {
+  const { username: currentUsername } = useAuth()
   const displayName = authorUsername || post.creator_name
+  const isOwnPost = !!currentUsername && currentUsername === displayName
 
   const [likes, setLikes] = useState(post.likes)
   const [isLiked, setIsLiked] = useState(post.is_liked)
   const [likeLoading, setLikeLoading] = useState(false)
   const [likeError, setLikeError] = useState<string | null>(null)
+
+  const [deletingPost, setDeletingPost] = useState(false)
 
   // Comments
   const [showComments, setShowComments] = useState(false)
@@ -53,6 +59,20 @@ export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) 
       setLikeError(getErrorMessage(err))
     } finally {
       setLikeLoading(false)
+    }
+  }
+
+  const handleDeletePost = async () => {
+    if (deletingPost) return
+    if (!confirm('Удалить этот пост?')) return
+
+    setDeletingPost(true)
+    try {
+      await deletePost(post.post_id)
+      onPostDelete?.(post.post_id)
+    } catch (err) {
+      setLikeError(getErrorMessage(err))
+      setDeletingPost(false)
     }
   }
 
@@ -105,11 +125,22 @@ export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) 
     }
   }
 
+  const handleDeleteComment = async (commentId: number) => {
+    if (!confirm('Удалить комментарий?')) return
+    try {
+      await deleteComment(commentId)
+      setComments((prev) => prev.filter((c) => c.comment_id !== commentId))
+      setCommentsCount((c) => Math.max(0, c - 1))
+    } catch (err) {
+      setCommentError(getErrorMessage(err))
+    }
+  }
+
   return (
     <article className="glass p-5 hover:border-violet-500/30 transition-all duration-300 group">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div>
+        <div className="min-w-0">
           <h3 className="font-semibold text-lg text-white group-hover:text-violet-200 transition-colors">
             {post.post_name}
           </h3>
@@ -122,6 +153,17 @@ export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) 
             </Link>
           )}
         </div>
+
+        {isOwnPost && (
+          <button
+            onClick={handleDeletePost}
+            disabled={deletingPost}
+            className="shrink-0 text-xs text-white/40 hover:text-red-400 px-2 py-1 rounded-lg hover:bg-red-500/10 transition-colors disabled:opacity-50"
+            title="Удалить пост"
+          >
+            {deletingPost ? '...' : '🗑'}
+          </button>
+        )}
       </div>
 
       {/* Body */}
@@ -185,24 +227,36 @@ export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) 
                 <p className="text-sm text-white/40 py-2">Пока нет комментариев</p>
               ) : (
                 <ul className="space-y-3 mb-4">
-                  {comments.map((c, idx) => (
-                    <li
-                      key={`${c.creator_id}-${idx}-${c.comment_text.slice(0, 20)}`}
-                      className="bg-space-900/50 rounded-xl px-3.5 py-2.5"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Link
-                          to={`/profile/${c.creator_username}`}
-                          className="text-sm font-medium text-cyan-400/90 hover:text-cyan-300"
-                        >
-                          @{c.creator_username}
-                        </Link>
-                      </div>
-                      <p className="text-sm text-white/75 whitespace-pre-wrap leading-relaxed">
-                        {c.comment_text}
-                      </p>
-                    </li>
-                  ))}
+                  {comments.map((c) => {
+                    const isOwnComment = !!currentUsername && currentUsername === c.creator_username
+                    return (
+                      <li
+                        key={c.comment_id}
+                        className="bg-space-900/50 rounded-xl px-3.5 py-2.5"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <Link
+                            to={`/profile/${c.creator_username}`}
+                            className="text-sm font-medium text-cyan-400/90 hover:text-cyan-300"
+                          >
+                            @{c.creator_username}
+                          </Link>
+                          {isOwnComment && (
+                            <button
+                              onClick={() => handleDeleteComment(c.comment_id)}
+                              className="text-xs text-white/30 hover:text-red-400 transition-colors"
+                              title="Удалить комментарий"
+                            >
+                              🗑
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-sm text-white/75 whitespace-pre-wrap leading-relaxed">
+                          {c.comment_text}
+                        </p>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
 

@@ -68,3 +68,26 @@ func (h CommentHandler) HandleGetAllCommentsOnPost(w http.ResponseWriter, r *htt
 
 	utils.WriteJSON(w, dtos)
 }
+
+func (h CommentHandler) HandleDeleteComment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
+	if parseErr != nil {
+		http.Error(w, "error during parsing user id", http.StatusBadRequest)
+		return
+	}
+
+	commentID, parseErr := strconv.ParseUint(r.PathValue("comment_id"), 10, 64)
+	if parseErr != nil {
+		http.Error(w, "error during parsing comment id", http.StatusBadRequest)
+		return
+	}
+
+	if apiErr := h.commentService.DeleteComment(uint(commentID), userID, ctx); apiErr != nil {
+		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
+		return
+	}
+
+	utils.WriteJSON(w, map[string]string{"message": "comment deleted"})
+}

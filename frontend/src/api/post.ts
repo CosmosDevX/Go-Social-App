@@ -29,6 +29,11 @@ export async function dislikePost(postId: number): Promise<{ likes: number }> {
   return data
 }
 
+export async function deletePost(postId: number): Promise<{ message: string }> {
+  const { data } = await api.delete<{ message: string }>(`/post/${postId}`)
+  return data
+}
+
 export async function getCurrentUserPosts(): Promise<Post[]> {
   const { data } = await api.get<Post[]>('/post/current_user/all')
   return data

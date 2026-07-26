@@ -12,6 +12,7 @@ import (
 )
 
 type CommentRepositoryInterface interface {
+	Delete(commentID, userID uint, db *gorm.DB) *delivery.APIError
 	Create(commentDTO dto.CommentDTO, db *gorm.DB) (uint, *delivery.APIError)
 	GetAllByPostID(postID uint, db *gorm.DB) ([]model.Comment, *delivery.APIError)
 	CountCommentsOnPost(postID uint, db *gorm.DB) (int, *delivery.APIError)
@@ -68,4 +69,21 @@ func (r CommentRepository) CountCommentsOnPost(postID uint, db *gorm.DB) (int, *
 	}
 
 	return int(count), nil
+}
+
+func (r CommentRepository) Delete(commentID, userID uint, db *gorm.DB) *delivery.APIError {
+	result := db.Delete(&model.Comment{}, "id = ? AND creator_id = ?", commentID, userID)
+	if result.Error != nil {
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+
+		return &delivery.APIError{Code: constants.DeleteError, Message: "error during deleting the comment"}
+	}
+
+	if result.RowsAffected == 0 {
+		return &delivery.APIError{Code: constants.NotFound, Message: "comment not deleted"}
+	}
+
+	return nil
 }

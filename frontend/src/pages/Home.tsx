@@ -43,6 +43,10 @@ export function Home() {
     )
   }
 
+  const handlePostDelete = (postId: number) => {
+    setPosts((prev) => prev.filter((p) => p.post_id !== postId))
+  }
+
   // Не авторизован — приветственный экран
   if (!isAuthenticated) {
     return (
@@ -119,6 +123,7 @@ export function Home() {
               key={post.post_id}
               post={post}
               onLikeChange={handleLikeChange}
+              onPostDelete={handlePostDelete}
             />
           ))}
         </div>

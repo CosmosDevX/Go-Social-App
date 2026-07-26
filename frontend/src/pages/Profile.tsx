@@ -58,6 +58,10 @@ export function Profile() {
     )
   }
 
+  const handlePostDelete = (postId: number) => {
+    setPosts((prev) => prev.filter((p) => p.post_id !== postId))
+  }
+
   if (!paramUsername) {
     return (
       <div className="text-center py-20 text-white/50">
@@ -126,6 +130,7 @@ export function Profile() {
               post={post}
               authorUsername={paramUsername}
               onLikeChange={handleLikeChange}
+              onPostDelete={handlePostDelete}
             />
           ))}
         </div>

@@ -3,6 +3,7 @@ package dto
 import "errors"
 
 type CommentDTO struct {
+	CommentID       uint   `json:"comment_id"`
 	PostID          uint   `json:"post_id"`
 	CommentText     string `json:"comment_text"`
 	CreatorUsername string `json:"creator_username"`

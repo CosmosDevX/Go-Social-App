@@ -11,6 +11,7 @@ import (
 )
 
 type CommentServiceInterface interface {
+	DeleteComment(commentID, userID uint, ctx context.Context) *delivery.APIError
 	CreateComment(commentDTO dto.CommentDTO, creatorID, postID uint, ctx context.Context) (uint, *delivery.APIError)
 	GetAllCommentsByPostID(postID uint, ctx context.Context) ([]dto.CommentDTO, *delivery.APIError)
 }
@@ -36,6 +37,14 @@ func (s CommentService) CreateComment(commentDTO dto.CommentDTO, creatorID, post
 	}
 
 	return commentID, nil
+}
+
+func (s CommentService) DeleteComment(commentID, userID uint, ctx context.Context) *delivery.APIError {
+	if apiErr := s.commentRepository.Delete(commentID, userID, s.db.WithContext(ctx)); apiErr != nil {
+		return apiErr
+	}
+
+	return nil
 }
 
 func (s CommentService) GetAllCommentsByPostID(postID uint, ctx context.Context) ([]dto.CommentDTO, *delivery.APIError) {

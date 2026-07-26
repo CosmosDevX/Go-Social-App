@@ -5,7 +5,7 @@ import "myapp/internal/delivery/http/dto"
 type Comment struct {
 	ID          uint
 	CommentText string `gorm:"type: VARCHAR(250)"`
-	PostID      uint   `gorm:"index"`
+	PostID      uint   `gorm:"index constraint:OnDelete:CASCADE"`
 	Post        Post   `gorm:"foreignKey: PostID; references: ID"`
 	CreatorID   uint   `gorm:"index"`
 	Creator     User   `gorm:"foreignKey: CreatorID; references: ID"`
@@ -13,6 +13,7 @@ type Comment struct {
 
 func (c Comment) ToCommentDTO() dto.CommentDTO {
 	return dto.CommentDTO{
+		CommentID:       c.ID,
 		PostID:          c.PostID,
 		CommentText:     c.CommentText,
 		CreatorUsername: c.Creator.Username,
