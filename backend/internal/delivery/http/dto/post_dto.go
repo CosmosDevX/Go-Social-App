@@ -7,8 +7,10 @@ type PostDTO struct {
 	PostName        string `json:"post_name"`
 	PostDescription string `json:"post_description"`
 	CreatorID       uint   `json:"creator_id"`
+	CreatorName     string `json:"creator_name"`
 	Likes           int    `json:"likes"`
 	IsLiked         bool   `json:"is_liked"`
+	CommentsCount   int    `json:"comments_count"`
 }
 
 func (dto PostDTO) Validate() error {

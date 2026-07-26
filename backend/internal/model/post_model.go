@@ -20,5 +20,6 @@ func (p Post) ToPostDTO() dto.PostDTO {
 		PostDescription: p.PostDescription,
 		CreatorID:       p.CreatorID,
 		Likes:           p.Likes,
+		CreatorName:     p.Creator.Username,
 	}
 }

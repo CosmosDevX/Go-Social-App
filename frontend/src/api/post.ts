@@ -5,8 +5,10 @@ export interface Post {
   post_name: string
   post_description: string
   creator_id: number
+  creator_name: string
   likes: number
   is_liked: boolean
+  comments_count: number
 }
 
 export async function createPost(post_name: string, post_description: string): Promise<{ post_id: number }> {
@@ -34,5 +36,10 @@ export async function getCurrentUserPosts(): Promise<Post[]> {
 
 export async function getUserPostsByUsername(username: string): Promise<Post[]> {
   const { data } = await api.get<Post[]>(`/post/${username}/all`)
+  return data
+}
+
+export async function getFeed(): Promise<Post[]> {
+  const { data } = await api.get<Post[]>('/post/feed')
   return data
 }

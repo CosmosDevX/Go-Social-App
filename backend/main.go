@@ -33,7 +33,7 @@ func main() {
 	jwtService := authorization.NewJWTService()
 	authService := authorization.NewAuthService(userRepository, refreshTokenRepository, jwtService, gormClient.GetDB())
 	userService := service.NewUserService(userRepository, gormClient.GetDB())
-	postService := service.NewPostService(postRepository, postLikeRepository, gormClient.GetDB())
+	postService := service.NewPostService(postRepository, postLikeRepository, commentRepository, gormClient.GetDB())
 	postLikeService := service.NewPostLikeService(postRepository, postLikeRepository, gormClient.GetDB())
 	commentService := service.NewCommentService(commentRepository, gormClient.GetDB())
 
@@ -60,6 +60,7 @@ func main() {
 	mux.HandleFunc("DELETE /post/{post_id}", authMiddleware.Protect(postHandler.HandleDeletePost))
 	mux.HandleFunc("GET /post/current_user/all", authMiddleware.Protect(postHandler.HandleGetCurrentUserPosts))
 	mux.HandleFunc("GET /post/{username}/all", authMiddleware.Protect(postHandler.HandleGetUserPostsByUsername))
+	mux.HandleFunc("GET /post/feed", authMiddleware.Protect(postHandler.HandleGetPostFeed))
 
 	mux.HandleFunc("POST /post/like/{post_id}", authMiddleware.Protect(postLikeHandler.HandleLikePost))
 	mux.HandleFunc("POST /post/dislike/{post_id}", authMiddleware.Protect(postLikeHandler.HandleDislikePost))

@@ -14,6 +14,7 @@ import (
 type CommentRepositoryInterface interface {
 	Create(commentDTO dto.CommentDTO, db *gorm.DB) (uint, *delivery.APIError)
 	GetAllByPostID(postID uint, db *gorm.DB) ([]model.Comment, *delivery.APIError)
+	CountCommentsOnPost(postID uint, db *gorm.DB) (int, *delivery.APIError)
 }
 
 type CommentRepository struct{}
@@ -53,4 +54,18 @@ func (r CommentRepository) GetAllByPostID(postID uint, db *gorm.DB) ([]model.Com
 	}
 
 	return comments, nil
+}
+
+func (r CommentRepository) CountCommentsOnPost(postID uint, db *gorm.DB) (int, *delivery.APIError) {
+	var count int64
+	result := db.Model(&model.Comment{}).Where("post_id = ?", postID).Count(&count)
+	if result.Error != nil {
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+
+		return 0, &delivery.APIError{Code: constants.FindError, Message: "error during count comments on post"}
+	}
+
+	return int(count), nil
 }

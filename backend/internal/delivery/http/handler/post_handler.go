@@ -84,6 +84,24 @@ func (h PostHandler) HandleGetUserPostsByUsername(w http.ResponseWriter, r *http
 	utils.WriteJSON(w, dtos)
 }
 
+func (h PostHandler) HandleGetPostFeed(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
+	if parseErr != nil {
+		http.Error(w, "error during parsing user id", http.StatusBadRequest)
+		return
+	}
+
+	dtos, apiErr := h.postService.GetPostFeed(parsedUserID, ctx)
+	if apiErr != nil {
+		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
+		return
+	}
+
+	utils.WriteJSON(w, dtos)
+}
+
 func (h PostHandler) HandleDeletePost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

@@ -19,6 +19,7 @@ type PostRepositoryInterface interface {
 	IncrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
 	DecrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
 	DeletePost(postID, userID uint, db *gorm.DB) *delivery.APIError
+	GetPostFeed(db *gorm.DB) ([]model.Post, *delivery.APIError)
 }
 
 type PostRepository struct{}
@@ -63,7 +64,7 @@ func (r PostRepository) GetByID(postID uint, db *gorm.DB) (*model.Post, *deliver
 func (r PostRepository) GetAllByID(userID uint, db *gorm.DB) ([]model.Post, *delivery.APIError) {
 	var posts []model.Post
 
-	result := db.Find(&posts, "creator_id = ?", userID)
+	result := db.Preload("Creator").Find(&posts, "creator_id = ?", userID)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
 			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -81,7 +82,7 @@ func (r PostRepository) GetAllByID(userID uint, db *gorm.DB) ([]model.Post, *del
 func (r PostRepository) GetAllByUsername(username string, db *gorm.DB) ([]model.Post, *delivery.APIError) {
 	var posts []model.Post
 
-	result := db.Joins("JOIN users ON users.id = posts.creator_id").
+	result := db.Preload("Creator").Joins("JOIN users ON users.id = posts.creator_id").
 		Where("users.username = ?", username).
 		Find(&posts)
 
@@ -163,4 +164,23 @@ func (r PostRepository) DeletePost(postID, userID uint, db *gorm.DB) *delivery.A
 	}
 
 	return nil
+}
+
+func (r PostRepository) GetPostFeed(db *gorm.DB) ([]model.Post, *delivery.APIError) {
+	var posts []model.Post
+	result := db.
+		Preload("Creator").
+		Order("RANDOM()").
+		Limit(30).
+		Find(&posts)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+
+		return nil, &delivery.APIError{Code: constants.FindError, Message: "error during getting post feed"}
+	}
+
+	return posts, nil
 }

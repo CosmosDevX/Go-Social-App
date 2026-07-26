@@ -6,11 +6,14 @@ import { getErrorMessage } from '../api/client'
 
 interface PostCardProps {
   post: Post
+  /** если не передан — берётся post.creator_name */
   authorUsername?: string
   onLikeChange?: (postId: number, likes: number, isLiked: boolean) => void
 }
 
 export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) {
+  const displayName = authorUsername || post.creator_name
+
   const [likes, setLikes] = useState(post.likes)
   const [isLiked, setIsLiked] = useState(post.is_liked)
   const [likeLoading, setLikeLoading] = useState(false)
@@ -19,6 +22,7 @@ export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) 
   // Comments
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState<Comment[]>([])
+  const [commentsCount, setCommentsCount] = useState(post.comments_count ?? 0)
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [commentsError, setCommentsError] = useState<string | null>(null)
   const [commentsLoaded, setCommentsLoaded] = useState(false)
@@ -59,6 +63,7 @@ export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) 
     try {
       const data = await getCommentsByPostId(post.post_id)
       setComments(data)
+      setCommentsCount(data.length)
       setCommentsLoaded(true)
     } catch (err) {
       setCommentsError(getErrorMessage(err))
@@ -89,9 +94,9 @@ export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) 
     try {
       await createComment(post.post_id, text)
       setNewComment('')
-      // перезагружаем список, чтобы получить username и актуальные данные
       const data = await getCommentsByPostId(post.post_id)
       setComments(data)
+      setCommentsCount(data.length)
       setCommentsLoaded(true)
     } catch (err) {
       setCommentError(getErrorMessage(err))
@@ -108,12 +113,12 @@ export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) 
           <h3 className="font-semibold text-lg text-white group-hover:text-violet-200 transition-colors">
             {post.post_name}
           </h3>
-          {authorUsername && (
+          {displayName && (
             <Link
-              to={`/profile/${authorUsername}`}
+              to={`/profile/${displayName}`}
               className="text-sm text-cyan-400/80 hover:text-cyan-300 transition-colors"
             >
-              @{authorUsername}
+              @{displayName}
             </Link>
           )}
         </div>
@@ -156,10 +161,8 @@ export function PostCard({ post, authorUsername, onLikeChange }: PostCardProps) 
             }
           `}
         >
-          💬 Комментарии
-          {commentsLoaded && comments.length > 0 && (
-            <span className="text-xs opacity-70">({comments.length})</span>
-          )}
+          💬
+          <span>{commentsCount}</span>
         </button>
 
         {likeError && (
