@@ -37,9 +37,8 @@ func (h PostHandler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error during parsing creator id", http.StatusBadRequest)
 		return
 	}
-	postDTO.CreatorID = creatorID
 
-	postID, apiErr := h.postService.CreatePost(postDTO, ctx)
+	postID, apiErr := h.postService.CreatePost(postDTO, creatorID, ctx)
 	if apiErr != nil {
 		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
 		return

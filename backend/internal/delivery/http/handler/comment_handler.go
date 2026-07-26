@@ -44,9 +44,7 @@ func (h CommentHandler) HandleCreateComment(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	commentDTO.CreatorID = creatorID
-	commentDTO.PostID = uint(postID)
-	commentID, apiErr := h.commentService.CreateComment(commentDTO, ctx)
+	commentID, apiErr := h.commentService.CreateComment(commentDTO, creatorID, uint(postID), ctx)
 	if apiErr != nil {
 		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
 		return

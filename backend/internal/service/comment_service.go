@@ -11,7 +11,7 @@ import (
 )
 
 type CommentServiceInterface interface {
-	CreateComment(commentDTO dto.CommentDTO, ctx context.Context) (uint, *delivery.APIError)
+	CreateComment(commentDTO dto.CommentDTO, creatorID, postID uint, ctx context.Context) (uint, *delivery.APIError)
 	GetAllCommentsByPostID(postID uint, ctx context.Context) ([]dto.CommentDTO, *delivery.APIError)
 }
 
@@ -27,7 +27,9 @@ func NewCommentService(commentRepository repository.CommentRepositoryInterface, 
 	}
 }
 
-func (s CommentService) CreateComment(commentDTO dto.CommentDTO, ctx context.Context) (uint, *delivery.APIError) {
+func (s CommentService) CreateComment(commentDTO dto.CommentDTO, creatorID, postID uint, ctx context.Context) (uint, *delivery.APIError) {
+	commentDTO.CreatorID = creatorID
+	commentDTO.PostID = postID
 	commentID, apiErr := s.commentRepository.Create(commentDTO, s.db.WithContext(ctx))
 	if apiErr != nil {
 		return 0, apiErr
