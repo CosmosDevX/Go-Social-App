@@ -10,11 +10,11 @@ export function Home() {
         <div className="text-7xl mb-6 animate-float">🌌</div>
         <h1 className="text-4xl sm:text-5xl font-bold mb-4">
           <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
-            Space Posts
+            КосмоСеть
           </span>
         </h1>
         <p className="text-white/60 text-lg mb-8 leading-relaxed">
-          Космическая платформа для постов.
+          Космическая социальная сеть.
           <br />
           <span className="text-white/40 text-base">
             Общая лента появится позже

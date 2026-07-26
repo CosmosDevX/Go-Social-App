@@ -18,6 +18,7 @@ type PostRepositoryInterface interface {
 	GetAllByUsername(username string, db *gorm.DB) ([]model.Post, *delivery.APIError)
 	IncrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
 	DecrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
+	DeletePost(postID, userID uint, db *gorm.DB) *delivery.APIError
 }
 
 type PostRepository struct{}
@@ -145,4 +146,21 @@ func (r PostRepository) DecrementLikes(postID uint, db *gorm.DB) (int, *delivery
 	}
 
 	return likes, nil
+}
+
+func (r PostRepository) DeletePost(postID, userID uint, db *gorm.DB) *delivery.APIError {
+	result := db.Delete(&model.Post{}, "id = ? AND creator_id = ?", postID, userID)
+	if result.Error != nil {
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+
+		return &delivery.APIError{Code: constants.DeleteError, Message: "error during deleting the post"}
+	}
+
+	if result.RowsAffected == 0 {
+		return &delivery.APIError{Code: constants.NotFound, Message: "post not deleted"}
+	}
+
+	return nil
 }

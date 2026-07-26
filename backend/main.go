@@ -26,6 +26,7 @@ func main() {
 	userRepository := repository.UserRepository{}
 	postRepository := repository.PostRepository{}
 	postLikeRepository := repository.PostLikeRepository{}
+	commentRepository := repository.CommentRepository{}
 	refreshTokenRepository := repository.NewRefreshTokenRepository(redisClient.GetClient())
 
 	//initialize services
@@ -33,11 +34,15 @@ func main() {
 	authService := authorization.NewAuthService(userRepository, refreshTokenRepository, jwtService, gormClient.GetDB())
 	userService := service.NewUserService(userRepository, gormClient.GetDB())
 	postService := service.NewPostService(postRepository, postLikeRepository, gormClient.GetDB())
+	postLikeService := service.NewPostLikeService(postRepository, postLikeRepository, gormClient.GetDB())
+	commentService := service.NewCommentService(commentRepository, gormClient.GetDB())
 
 	//initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService)
 	postHandler := handler.NewPostHandler(postService)
+	postLikeHandler := handler.NewPostLikeHandler(postLikeService)
+	commentHandler := handler.NewCommentHandler(commentService)
 
 	//initialize middlewares
 	authMiddleware := middleware.NewAuthMiddleware(jwtService)
@@ -52,10 +57,15 @@ func main() {
 	mux.HandleFunc("GET /user/current/profile", authMiddleware.Protect(userHandler.HandleCurrentUserProfile))
 
 	mux.HandleFunc("POST /post/create", authMiddleware.Protect(postHandler.HandleCreatePost))
-	mux.HandleFunc("POST /post/like/{post_id}", authMiddleware.Protect(postHandler.HandleLikePost))
-	mux.HandleFunc("POST /post/dislike/{post_id}", authMiddleware.Protect(postHandler.HandleDislikePost))
+	mux.HandleFunc("DELETE /post/{post_id}", authMiddleware.Protect(postHandler.HandleDeletePost))
 	mux.HandleFunc("GET /post/current_user/all", authMiddleware.Protect(postHandler.HandleGetCurrentUserPosts))
 	mux.HandleFunc("GET /post/{username}/all", authMiddleware.Protect(postHandler.HandleGetUserPostsByUsername))
+
+	mux.HandleFunc("POST /post/like/{post_id}", authMiddleware.Protect(postLikeHandler.HandleLikePost))
+	mux.HandleFunc("POST /post/dislike/{post_id}", authMiddleware.Protect(postLikeHandler.HandleDislikePost))
+
+	mux.HandleFunc("POST /comment/create/{post_id}", authMiddleware.Protect(commentHandler.HandleCreateComment))
+	mux.HandleFunc("GET /comment/all/{post_id}", authMiddleware.Protect(commentHandler.HandleGetAllCommentsOnPost))
 
 	httpService := service.NewHTTPService(http.TimeoutHandler(middleware.CorsMiddleware(mux), time.Minute, "request timeout"))
 

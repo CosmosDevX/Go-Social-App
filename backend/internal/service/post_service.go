@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"myapp/internal/constants"
 	"myapp/internal/delivery"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/model"
@@ -13,12 +12,11 @@ import (
 )
 
 type PostServiceInterface interface {
-	CreatePost(postDTO dto.PostDTO, creatorID uint, ctx context.Context) (uint, *delivery.APIError)
+	CreatePost(postDTO dto.PostDTO, ctx context.Context) (uint, *delivery.APIError)
 	GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *delivery.APIError)
 	GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
 	GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
-	LikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError)
-	DislikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError)
+	DeletePost(postID, userID uint, ctx context.Context) *delivery.APIError
 }
 
 type PostService struct {
@@ -35,8 +33,7 @@ func NewPostService(postRepository repository.PostRepositoryInterface, postLikeR
 	}
 }
 
-func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID uint, ctx context.Context) (uint, *delivery.APIError) {
-	postDTO.CreatorID = creatorID
+func (s PostService) CreatePost(postDTO dto.PostDTO, ctx context.Context) (uint, *delivery.APIError) {
 	postID, apiErr := s.postRepository.Create(postDTO, s.db.WithContext(ctx))
 	if apiErr != nil {
 		return 0, apiErr
@@ -95,70 +92,10 @@ func (s PostService) makePostDTOs(posts []model.Post, likedPostsID []uint) []dto
 	return dtos
 }
 
-func (s PostService) LikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError) {
-	dbWithCtx := s.db.WithContext(ctx)
-
-	result, apiErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
-	if apiErr != nil {
-		return 0, apiErr
-	}
-	if result {
-		return 0, &delivery.APIError{Code: constants.CreateError, Message: "user already liked this post"}
+func (s PostService) DeletePost(postID, userID uint, ctx context.Context) *delivery.APIError {
+	if apiErr := s.postRepository.DeletePost(postID, userID, s.db.WithContext(ctx)); apiErr != nil {
+		return apiErr
 	}
 
-	tx := dbWithCtx.Begin()
-	if tx.Error != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "error starting transaction"}
-	}
-
-	likes, apiErr := s.postRepository.IncrementLikes(postID, tx)
-	if apiErr != nil {
-		tx.Rollback()
-		return 0, apiErr
-	}
-
-	if apiErr := s.postLikeRepository.CreateLike(userID, postID, tx); apiErr != nil {
-		tx.Rollback()
-		return 0, apiErr
-	}
-
-	if tx.Commit().Error != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction commit failed"}
-	}
-
-	return likes, nil
-}
-
-func (s PostService) DislikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError) {
-	dbWithCtx := s.db.WithContext(ctx)
-
-	result, apiErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
-	if apiErr != nil {
-		return 0, apiErr
-	}
-	if !result {
-		return 0, &delivery.APIError{Code: constants.CreateError, Message: "user not liked this post"}
-	}
-
-	tx := dbWithCtx.Begin()
-	if tx.Error != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "error starting transaction"}
-	}
-
-	likes, apiErr := s.postRepository.DecrementLikes(postID, tx)
-	if apiErr != nil {
-		tx.Rollback()
-		return 0, apiErr
-	}
-
-	if apiErr := s.postLikeRepository.DeleteLike(userID, postID, tx); apiErr != nil {
-		tx.Rollback()
-		return 0, apiErr
-	}
-
-	if tx.Commit().Error != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction commit failed"}
-	}
-
-	return likes, nil
+	return nil
 }

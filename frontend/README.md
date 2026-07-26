@@ -1,4 +1,4 @@
-# Space Posts — Frontend
+# КосмоСеть — Frontend
 
 Современный React-фронтенд для твоего бэкенда.
 

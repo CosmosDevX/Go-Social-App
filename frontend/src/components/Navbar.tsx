@@ -16,7 +16,7 @@ export function Navbar() {
         <Link to="/" className="flex items-center gap-2 group">
           <span className="text-2xl">🌌</span>
           <span className="font-semibold text-lg tracking-tight bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent group-hover:from-violet-300 group-hover:to-cyan-300 transition-all">
-            Space Posts
+            КосмоСеть
           </span>
         </Link>
 
