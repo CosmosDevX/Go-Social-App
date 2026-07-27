@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createPost } from '../api/post'
 import { getErrorMessage } from '../api/client'
@@ -7,11 +7,35 @@ import { useAuth } from '../context/AuthContext'
 export function CreatePost() {
   const { username } = useAuth()
   const navigate = useNavigate()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+    if (file) {
+      setImageFile(file)
+      setPreviewUrl(URL.createObjectURL(file))
+    } else {
+      setImageFile(null)
+      setPreviewUrl(null)
+    }
+  }
+
+  const clearImage = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setImageFile(null)
+    setPreviewUrl(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -28,7 +52,7 @@ export function CreatePost() {
 
     setLoading(true)
     try {
-      await createPost(name.trim(), description.trim())
+      await createPost(name.trim(), description.trim(), imageFile)
       navigate(`/profile/${username}`)
     } catch (err) {
       setError(getErrorMessage(err))
@@ -76,7 +100,7 @@ export function CreatePost() {
           </label>
           <textarea
             id="description"
-            className="input-field min-h-[160px] resize-y"
+            className="input-field min-h-[140px] resize-y"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="О чём твой пост?"
@@ -84,6 +108,40 @@ export function CreatePost() {
             minLength={1}
             maxLength={900}
           />
+        </div>
+
+        {/* Image upload */}
+        <div>
+          <label className="label">Картинка <span className="text-white/40">(необязательно)</span></label>
+
+          {previewUrl ? (
+            <div className="relative rounded-xl overflow-hidden border border-white/10">
+              <img
+                src={previewUrl}
+                alt="Превью"
+                className="w-full max-h-64 object-cover"
+              />
+              <button
+                type="button"
+                onClick={clearImage}
+                className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-black/60 text-white/90 text-xs hover:bg-red-500/80 transition-colors"
+              >
+                Убрать
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center gap-2 w-full h-32 rounded-xl border border-dashed border-white/15 bg-space-900/50 hover:border-violet-500/40 hover:bg-space-900/80 cursor-pointer transition-all">
+              <span className="text-2xl opacity-60">🖼</span>
+              <span className="text-sm text-white/50">Нажми, чтобы выбрать изображение</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </label>
+          )}
         </div>
 
         <div className="flex gap-3 pt-2">

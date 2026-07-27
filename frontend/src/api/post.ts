@@ -9,13 +9,23 @@ export interface Post {
   likes: number
   is_liked: boolean
   comments_count: number
+  image_name: string | null
 }
 
-export async function createPost(post_name: string, post_description: string): Promise<{ post_id: number }> {
-  const { data } = await api.post<{ post_id: number }>('/post/create', {
-    post_name,
-    post_description,
-  })
+export async function createPost(
+  post_name: string,
+  post_description: string,
+  imageFile?: File | null
+): Promise<{ post_id: number }> {
+  const form = new FormData()
+  form.append('post_name', post_name)
+  form.append('post_description', post_description)
+  // post_image — только если пользователь выбрал файл
+  if (imageFile) {
+    form.append('post_image', imageFile)
+  }
+
+  const { data } = await api.post<{ post_id: number }>('/post/create', form)
   return data
 }
 

@@ -29,6 +29,7 @@ func (r PostRepository) Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *deliver
 		PostName:        postDTO.PostName,
 		PostDescription: postDTO.PostDescription,
 		CreatorID:       postDTO.CreatorID,
+		ImageName:       postDTO.ImageName,
 	}
 
 	result := db.Create(&post)

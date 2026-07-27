@@ -1,6 +1,9 @@
 package dto
 
-import "errors"
+import (
+	"errors"
+	"unicode/utf8"
+)
 
 type CommentDTO struct {
 	CommentID       uint   `json:"comment_id"`
@@ -11,7 +14,8 @@ type CommentDTO struct {
 }
 
 func (dto CommentDTO) Validate() error {
-	if len(dto.CommentText) > 250 || len(dto.CommentText) < 1 {
+	charCount := utf8.RuneCountInString(dto.CommentText)
+	if charCount > 250 || charCount < 1 {
 		return errors.New("comment text cannot be bigger than 250 and lower than 1")
 	}
 

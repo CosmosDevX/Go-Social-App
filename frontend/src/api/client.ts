@@ -1,25 +1,27 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 
-const API_BASE = 'http://localhost:8080'
+export const API_BASE = 'http://localhost:8080'
 
 export const api = axios.create({
   baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // for refresh cookie if backend sets it
+  withCredentials: true,
 })
 
-// Attach access token to every request
+// Attach access token; for FormData let browser set Content-Type with boundary
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('access_token')
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  if (config.data instanceof FormData && config.headers) {
+    delete config.headers['Content-Type']
+  }
   return config
 })
 
-// Simple response interceptor for 401 → try refresh once
 let isRefreshing = false
 let failedQueue: Array<{
   resolve: (token: string) => void
@@ -76,7 +78,6 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null)
         localStorage.removeItem('access_token')
-        // Let the AuthContext handle redirect
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
@@ -101,4 +102,10 @@ export function getErrorMessage(error: unknown): string {
   }
   if (error instanceof Error) return error.message
   return 'Something went wrong'
+}
+
+/** URL картинки поста (или null, если нет) */
+export function getPostImageUrl(imageName: string | null | undefined): string | null {
+  if (!imageName || !imageName.trim()) return null
+  return `${API_BASE}/uploads/${imageName}`
 }

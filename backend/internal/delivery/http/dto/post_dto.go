@@ -11,6 +11,7 @@ type PostDTO struct {
 	Likes           int    `json:"likes"`
 	IsLiked         bool   `json:"is_liked"`
 	CommentsCount   int    `json:"comments_count"`
+	ImageName       string `json:"image_name"`
 }
 
 func (dto PostDTO) Validate() error {

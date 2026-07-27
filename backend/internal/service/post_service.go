@@ -12,7 +12,7 @@ import (
 )
 
 type PostServiceInterface interface {
-	CreatePost(postDTO dto.PostDTO, creatorID uint, ctx context.Context) (uint, *delivery.APIError)
+	CreatePost(postDTO dto.PostDTO, creatorID uint, image_name string, ctx context.Context) (uint, *delivery.APIError)
 	GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *delivery.APIError)
 	GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
 	GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
@@ -38,8 +38,9 @@ func NewPostService(postRepository repository.PostRepositoryInterface,
 	}
 }
 
-func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID uint, ctx context.Context) (uint, *delivery.APIError) {
+func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID uint, imageName string, ctx context.Context) (uint, *delivery.APIError) {
 	postDTO.CreatorID = creatorID
+	postDTO.ImageName = imageName
 	postID, apiErr := s.postRepository.Create(postDTO, s.db.WithContext(ctx))
 	if apiErr != nil {
 		return 0, apiErr

@@ -2,7 +2,7 @@ import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Post, likePost, dislikePost, deletePost } from '../api/post'
 import { Comment, createComment, getCommentsByPostId, deleteComment } from '../api/comment'
-import { getErrorMessage } from '../api/client'
+import { getErrorMessage, getPostImageUrl } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 
 interface PostCardProps {
@@ -17,6 +17,7 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
   const { username: currentUsername } = useAuth()
   const displayName = authorUsername || post.creator_name
   const isOwnPost = !!currentUsername && currentUsername === displayName
+  const imageUrl = getPostImageUrl(post.image_name)
 
   const [likes, setLikes] = useState(post.likes)
   const [isLiked, setIsLiked] = useState(post.is_liked)
@@ -170,6 +171,18 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
       <p className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap mb-4">
         {post.post_description}
       </p>
+
+      {/* Image */}
+      {imageUrl && (
+        <div className="mb-4 rounded-xl overflow-hidden border border-white/10">
+          <img
+            src={imageUrl}
+            alt={post.post_name}
+            className="w-full max-h-96 object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-3 flex-wrap">

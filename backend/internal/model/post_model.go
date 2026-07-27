@@ -11,6 +11,7 @@ type Post struct {
 	CreatorID       uint   `gorm:"index"`
 	Creator         User   `gorm:"foreignKey: CreatorID; references: ID"`
 	Likes           int    `gorm:"type: INTEGER"`
+	ImageName       string `gorm:"type: VARCHAR(300)"`
 }
 
 func (p Post) ToPostDTO() dto.PostDTO {
@@ -21,5 +22,6 @@ func (p Post) ToPostDTO() dto.PostDTO {
 		CreatorID:       p.CreatorID,
 		Likes:           p.Likes,
 		CreatorName:     p.Creator.Username,
+		ImageName:       p.ImageName,
 	}
 }
