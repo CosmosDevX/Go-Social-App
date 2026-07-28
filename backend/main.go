@@ -9,6 +9,7 @@ import (
 	"myapp/internal/repository"
 	"myapp/internal/service"
 	"myapp/internal/service/authorization"
+	"myapp/internal/utils"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +23,9 @@ func main() {
 	gormClient.Setup()
 	redisClient := infrastructure.NewRedisClient()
 
+	//initialize managers
+	fileManager := utils.NewFileManager()
+
 	//initialize repositories
 	userRepository := repository.UserRepository{}
 	postRepository := repository.PostRepository{}
@@ -33,7 +37,7 @@ func main() {
 	jwtService := authorization.NewJWTService()
 	authService := authorization.NewAuthService(userRepository, refreshTokenRepository, jwtService, gormClient.GetDB())
 	userService := service.NewUserService(userRepository, gormClient.GetDB())
-	postService := service.NewPostService(postRepository, postLikeRepository, commentRepository, gormClient.GetDB())
+	postService := service.NewPostService(postRepository, postLikeRepository, commentRepository, fileManager, gormClient.GetDB())
 	postLikeService := service.NewPostLikeService(postRepository, postLikeRepository, gormClient.GetDB())
 	commentService := service.NewCommentService(commentRepository, gormClient.GetDB())
 

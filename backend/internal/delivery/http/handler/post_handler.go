@@ -1,17 +1,13 @@
 package handler
 
 import (
-	"fmt"
-	"io"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/service"
 	"myapp/internal/utils"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
-	"time"
+	"strings"
 )
 
 type PostHandler struct {
@@ -35,8 +31,13 @@ func (h PostHandler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	file, header, err := r.FormFile("post_image")
+	contentType := header.Header.Get("Content-Type")
 	if err != nil {
 		http.Error(w, "file not found", http.StatusBadRequest)
+		return
+	}
+	if !strings.HasPrefix(contentType, "image/") {
+		http.Error(w, "invalid file type", http.StatusBadRequest)
 		return
 	}
 
@@ -61,23 +62,7 @@ func (h PostHandler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileExt := filepath.Ext(header.Filename)
-	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), fileExt)
-	savePath := filepath.Join("uploads", filename)
-
-	dst, err := os.Create(savePath)
-	if err != nil {
-		http.Error(w, "save error", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		http.Error(w, "write error", http.StatusInternalServerError)
-		return
-	}
-
-	postID, apiErr := h.postService.CreatePost(postDTO, creatorID, filename, ctx)
+	postID, apiErr := h.postService.CreatePost(postDTO, creatorID, file, header, ctx)
 	if apiErr != nil {
 		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
 		return

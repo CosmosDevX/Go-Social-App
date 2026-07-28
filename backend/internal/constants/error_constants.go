@@ -9,13 +9,14 @@ const (
 	RefreshTokenError = "REFRESH_TOKEN_ERROR"
 
 	//repository errors
-	NotFound       = "NOT_FOUND"
-	RequestTimeout = "REQUEST_TIMEOUT"
-	SaveError      = "SAVE_ERROR"
-	DeleteError    = "DELETE_ERROR"
-	FindError      = "FIND_ERROR"
-	UpdateError    = "UPDATE_ERROR"
-	CreateError    = "CREATE_ERROR"
+	NotFound        = "NOT_FOUND"
+	RequestTimeout  = "REQUEST_TIMEOUT"
+	SaveError       = "SAVE_ERROR"
+	DeleteError     = "DELETE_ERROR"
+	FindError       = "FIND_ERROR"
+	UpdateError     = "UPDATE_ERROR"
+	CreateError     = "CREATE_ERROR"
+	UniqueViolation = "UNIQUE_VIOLATION"
 
 	//service errors
 	ParseError       = "PARSE_ERROR"

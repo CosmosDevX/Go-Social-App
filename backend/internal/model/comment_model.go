@@ -5,7 +5,7 @@ import "myapp/internal/delivery/http/dto"
 type Comment struct {
 	ID          uint
 	CommentText string `gorm:"type: VARCHAR(250)"`
-	PostID      uint   `gorm:"index constraint:OnDelete:CASCADE"`
+	PostID      uint   `gorm:"index"`
 	Post        Post   `gorm:"foreignKey: PostID; references: ID"`
 	CreatorID   uint   `gorm:"index"`
 	Creator     User   `gorm:"foreignKey: CreatorID; references: ID"`

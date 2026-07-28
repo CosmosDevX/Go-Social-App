@@ -44,6 +44,9 @@ func (r UserRepository) CreateUser(userDTO dto.UserDTO, db *gorm.DB) (uint, *del
 		if errors.Is(result.Error, context.DeadlineExceeded) {
 			return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
+		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+			return 0, &delivery.APIError{Code: constants.UniqueViolation, Message: "username already taken"}
+		}
 
 		return 0, &delivery.APIError{Code: constants.CreateError, Message: "error during user creating"}
 	}

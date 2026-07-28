@@ -20,6 +20,7 @@ type PostRepositoryInterface interface {
 	DecrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
 	DeletePost(postID, userID uint, db *gorm.DB) *delivery.APIError
 	GetPostFeed(db *gorm.DB) ([]model.Post, *delivery.APIError)
+	GetImageName(postID uint, db *gorm.DB) (string, *delivery.APIError)
 }
 
 type PostRepository struct{}
@@ -134,13 +135,11 @@ func (r PostRepository) DecrementLikes(postID uint, db *gorm.DB) (int, *delivery
 		Scan(&likes)
 
 	if result.Error != nil {
-		if result.Error != nil {
-			if errors.Is(result.Error, context.DeadlineExceeded) {
-				return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
-			}
-
-			return 0, &delivery.APIError{Code: constants.UpdateError, Message: "error during decrement likes on post"}
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
+
+		return 0, &delivery.APIError{Code: constants.UpdateError, Message: "error during decrement likes on post"}
 	}
 
 	if result.RowsAffected == 0 {
@@ -184,4 +183,21 @@ func (r PostRepository) GetPostFeed(db *gorm.DB) ([]model.Post, *delivery.APIErr
 	}
 
 	return posts, nil
+}
+
+func (r PostRepository) GetImageName(postID uint, db *gorm.DB) (string, *delivery.APIError) {
+	var imageName string
+	result := db.Model(&model.Post{}).Where("id = ?", postID).Select("image_name").Scan(&imageName)
+	if result.Error != nil {
+		if errors.Is(result.Error, context.DeadlineExceeded) {
+			return "", &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return "", &delivery.APIError{Code: constants.NotFound, Message: "post not found"}
+		}
+
+		return "", &delivery.APIError{Code: constants.FindError, Message: "error during getting post image"}
+	}
+
+	return imageName, nil
 }

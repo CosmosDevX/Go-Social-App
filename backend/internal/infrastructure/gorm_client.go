@@ -10,7 +10,6 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 type GormClient struct {
@@ -25,7 +24,7 @@ func (c *GormClient) Setup() {
 	dsn := os.Getenv("CONNECTION_STRING")
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		/*Logger: logger.Default.LogMode(logger.Silent),*/
 	})
 	if err != nil {
 		log.Fatal(err)
