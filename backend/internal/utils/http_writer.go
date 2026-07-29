@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"myapp/internal/domain"
 	"net/http"
 )
 
@@ -11,4 +12,10 @@ func WriteJSON(w http.ResponseWriter, data any) {
 		http.Error(w, "error during writing response", http.StatusBadRequest)
 		return
 	}
+}
+
+func WriteError(w http.ResponseWriter, domainErr domain.DomainError) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(MapError(domainErr.Code))
+	json.NewEncoder(w).Encode(domainErr)
 }

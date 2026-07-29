@@ -2,6 +2,7 @@ package handler
 
 import (
 	"myapp/internal/delivery/http/dto"
+	"myapp/internal/domain"
 	"myapp/internal/service"
 	"myapp/internal/utils"
 	"net/http"
@@ -20,19 +21,19 @@ func NewUserHandler(userService service.UserServiceInterface) UserHandler {
 func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	var userDTO dto.UserDTO
 	if err := utils.Deserialize(r.Body, &userDTO); err != nil {
-		http.Error(w, "error during deserializing body", http.StatusBadRequest)
+		utils.WriteError(w, *domain.NewDeserializingError("error during deserializing user"))
 		return
 	}
 
 	validationErr := userDTO.Validate()
 	if validationErr != nil {
-		http.Error(w, validationErr.Error(), http.StatusBadRequest)
+		utils.WriteError(w, *domain.NewValidationError(validationErr.Error()))
 		return
 	}
 
-	id, err := h.userService.CreateUser(&userDTO, r.Context())
-	if err != nil {
-		http.Error(w, err.Message, utils.IdentifyAPIError(err.Code))
+	id, domainErr := h.userService.CreateUser(&userDTO, r.Context())
+	if domainErr != nil {
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
@@ -40,9 +41,9 @@ func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h UserHandler) HandleCurrentUserProfile(w http.ResponseWriter, r *http.Request) {
-	username, apiErr := h.userService.CurrentUserProfile(r.Context())
-	if apiErr != nil {
-		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
+	username, domainErr := h.userService.CurrentUserProfile(r.Context())
+	if domainErr != nil {
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
@@ -50,9 +51,9 @@ func (h UserHandler) HandleCurrentUserProfile(w http.ResponseWriter, r *http.Req
 }
 
 func (h UserHandler) HandleGetUsernameByID(w http.ResponseWriter, r *http.Request) {
-	username, apiErr := h.userService.GetUsernameByID(r.PathValue("user_id"), r.Context())
-	if apiErr != nil {
-		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
+	username, domainErr := h.userService.GetUsernameByID(r.PathValue("user_id"), r.Context())
+	if domainErr != nil {
+		utils.WriteError(w, *domainErr)
 		return
 	}
 

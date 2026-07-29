@@ -4,6 +4,7 @@ import { Post, likePost, dislikePost, deletePost } from '../api/post'
 import { Comment, createComment, getCommentsByPostId, deleteComment } from '../api/comment'
 import { getErrorMessage, getPostImageUrl } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import { ConfirmModal } from './ConfirmModal'
 
 interface PostCardProps {
   post: Post
@@ -25,6 +26,7 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
   const [likeError, setLikeError] = useState<string | null>(null)
 
   const [deletingPost, setDeletingPost] = useState(false)
+  const [showDeletePostModal, setShowDeletePostModal] = useState(false)
 
   // Comments
   const [showComments, setShowComments] = useState(false)
@@ -38,6 +40,10 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
   const [newComment, setNewComment] = useState('')
   const [commentSubmitting, setCommentSubmitting] = useState(false)
   const [commentError, setCommentError] = useState<string | null>(null)
+
+  // Delete comment modal
+  const [commentToDelete, setCommentToDelete] = useState<number | null>(null)
+  const [deletingComment, setDeletingComment] = useState(false)
 
   const handleLikeToggle = async () => {
     if (likeLoading) return
@@ -64,12 +70,10 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
   }
 
   const handleDeletePost = async () => {
-    if (deletingPost) return
-    if (!confirm('Удалить этот пост?')) return
-
     setDeletingPost(true)
     try {
       await deletePost(post.post_id)
+      setShowDeletePostModal(false)
       onPostDelete?.(post.post_id)
     } catch (err) {
       setLikeError(getErrorMessage(err))
@@ -126,14 +130,18 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
     }
   }
 
-  const handleDeleteComment = async (commentId: number) => {
-    if (!confirm('Удалить комментарий?')) return
+  const handleDeleteComment = async () => {
+    if (commentToDelete == null) return
+    setDeletingComment(true)
     try {
-      await deleteComment(commentId)
-      setComments((prev) => prev.filter((c) => c.comment_id !== commentId))
+      await deleteComment(commentToDelete)
+      setComments((prev) => prev.filter((c) => c.comment_id !== commentToDelete))
       setCommentsCount((c) => Math.max(0, c - 1))
+      setCommentToDelete(null)
     } catch (err) {
       setCommentError(getErrorMessage(err))
+    } finally {
+      setDeletingComment(false)
     }
   }
 
@@ -157,12 +165,12 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
 
         {isOwnPost && (
           <button
-            onClick={handleDeletePost}
+            onClick={() => setShowDeletePostModal(true)}
             disabled={deletingPost}
             className="shrink-0 text-xs text-white/40 hover:text-red-400 px-2 py-1 rounded-lg hover:bg-red-500/10 transition-colors disabled:opacity-50"
             title="Удалить пост"
           >
-            {deletingPost ? '...' : '🗑'}
+            🗑
           </button>
         )}
       </div>
@@ -256,7 +264,7 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
                           </Link>
                           {isOwnComment && (
                             <button
-                              onClick={() => handleDeleteComment(c.comment_id)}
+                              onClick={() => setCommentToDelete(c.comment_id)}
                               className="text-xs text-white/30 hover:text-red-400 transition-colors"
                               title="Удалить комментарий"
                             >
@@ -303,6 +311,28 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
           )}
         </div>
       )}
+
+      {/* Delete post modal */}
+      <ConfirmModal
+        open={showDeletePostModal}
+        title="Удалить пост?"
+        message="Пост и все его комментарии будут удалены. Это действие нельзя отменить."
+        confirmLabel="Удалить"
+        loading={deletingPost}
+        onConfirm={handleDeletePost}
+        onCancel={() => setShowDeletePostModal(false)}
+      />
+
+      {/* Delete comment modal */}
+      <ConfirmModal
+        open={commentToDelete != null}
+        title="Удалить комментарий?"
+        message="Комментарий будет удалён безвозвратно."
+        confirmLabel="Удалить"
+        loading={deletingComment}
+        onConfirm={handleDeleteComment}
+        onCancel={() => setCommentToDelete(null)}
+      />
     </article>
   )
 }

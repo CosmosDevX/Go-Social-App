@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func IdentifyAPIError(code string) int {
+func MapError(code string) int {
 	switch code {
 	case constants.NotFound:
 		return http.StatusNotFound
@@ -15,6 +15,10 @@ func IdentifyAPIError(code string) int {
 		return http.StatusUnauthorized
 	case constants.TokenSignError:
 		return http.StatusUnauthorized
+	case constants.ValidationError:
+		return http.StatusBadRequest
+	case constants.DeserializingError:
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}

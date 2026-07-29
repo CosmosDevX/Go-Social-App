@@ -3,15 +3,15 @@ package service
 import (
 	"context"
 	"myapp/internal/constants"
-	"myapp/internal/delivery"
+	"myapp/internal/domain"
 	"myapp/internal/repository"
 
 	"gorm.io/gorm"
 )
 
 type PostLikeServiceInterface interface {
-	LikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError)
-	DislikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError)
+	LikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError)
+	DislikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError)
 }
 
 type PostLikeService struct {
@@ -28,77 +28,77 @@ func NewPostLikeService(postRepository repository.PostRepositoryInterface, postL
 	}
 }
 
-func (s PostLikeService) LikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError) {
+func (s PostLikeService) LikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError) {
 	dbWithCtx := s.db.WithContext(ctx)
 
-	result, apiErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
-	if apiErr != nil {
-		return 0, apiErr
+	result, domainErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
+	if domainErr != nil {
+		return 0, domainErr
 	}
 	if result {
-		return 0, &delivery.APIError{Code: constants.CreateError, Message: "user already liked this post"}
+		return 0, &domain.DomainError{Code: constants.CreateError, Message: "user already liked this post"}
 	}
 
 	tx := dbWithCtx.Begin()
 	if tx.Error != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "error starting transaction"}
+		return 0, &domain.DomainError{Code: constants.TransactionError, Message: "error starting transaction"}
 	}
 
-	likes, apiErr := s.postRepository.IncrementLikes(postID, tx)
-	if apiErr != nil {
+	likes, domainErr := s.postRepository.IncrementLikes(postID, tx)
+	if domainErr != nil {
 		if result := tx.Rollback(); result.Error != nil {
-			return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction rollback failed"}
+			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
-		return 0, apiErr
+		return 0, domainErr
 	}
 
-	if apiErr := s.postLikeRepository.CreateLike(userID, postID, tx); apiErr != nil {
+	if domainErr := s.postLikeRepository.CreateLike(userID, postID, tx); domainErr != nil {
 		if result := tx.Rollback(); result.Error != nil {
-			return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction rollback failed"}
+			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
-		return 0, apiErr
+		return 0, domainErr
 	}
 
 	if tx.Commit().Error != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction commit failed"}
+		return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction commit failed"}
 	}
 
 	return likes, nil
 }
 
-func (s PostLikeService) DislikePost(postID, userID uint, ctx context.Context) (int, *delivery.APIError) {
+func (s PostLikeService) DislikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError) {
 	dbWithCtx := s.db.WithContext(ctx)
 
-	result, apiErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
-	if apiErr != nil {
-		return 0, apiErr
+	result, domainErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
+	if domainErr != nil {
+		return 0, domainErr
 	}
 	if !result {
-		return 0, &delivery.APIError{Code: constants.CreateError, Message: "user not liked this post"}
+		return 0, &domain.DomainError{Code: constants.CreateError, Message: "user not liked this post"}
 	}
 
 	tx := dbWithCtx.Begin()
 	if tx.Error != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "error starting transaction"}
+		return 0, &domain.DomainError{Code: constants.TransactionError, Message: "error starting transaction"}
 	}
 
-	likes, apiErr := s.postRepository.DecrementLikes(postID, tx)
-	if apiErr != nil {
+	likes, domainErr := s.postRepository.DecrementLikes(postID, tx)
+	if domainErr != nil {
 		if result := tx.Rollback(); result.Error != nil {
-			return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction rollback failed"}
+			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
-		return 0, apiErr
+		return 0, domainErr
 	}
 
-	if apiErr := s.postLikeRepository.DeleteLike(userID, postID, tx); apiErr != nil {
+	if domainErr := s.postLikeRepository.DeleteLike(userID, postID, tx); domainErr != nil {
 		if result := tx.Rollback(); result.Error != nil {
-			return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction rollback failed"}
+			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
-		return 0, apiErr
+		return 0, domainErr
 	}
 
 	if tx.Commit().Error != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction commit failed"}
+		return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction commit failed"}
 	}
 
 	return likes, nil

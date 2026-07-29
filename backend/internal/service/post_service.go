@@ -5,9 +5,8 @@ import (
 	"log"
 	"mime/multipart"
 	"myapp/internal/constants"
-	"myapp/internal/delivery"
 	"myapp/internal/delivery/http/dto"
-	"myapp/internal/model"
+	"myapp/internal/domain"
 	"myapp/internal/repository"
 	"myapp/internal/utils"
 	"slices"
@@ -16,12 +15,12 @@ import (
 )
 
 type PostServiceInterface interface {
-	CreatePost(postDTO dto.PostDTO, creatorID uint, file multipart.File, header *multipart.FileHeader, ctx context.Context) (uint, *delivery.APIError)
-	GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *delivery.APIError)
-	GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
-	GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
-	DeletePost(postID, userID uint, ctx context.Context) *delivery.APIError
-	GetPostFeed(currentUserID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError)
+	CreatePost(postDTO dto.PostDTO, creatorID uint, file multipart.File, header *multipart.FileHeader, ctx context.Context) (uint, *domain.DomainError)
+	GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *domain.DomainError)
+	GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
+	GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
+	DeletePost(postID, userID uint, ctx context.Context) *domain.DomainError
+	GetPostFeed(currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
 }
 
 type PostService struct {
@@ -44,75 +43,75 @@ func NewPostService(postRepository repository.PostRepositoryInterface,
 	}
 }
 
-func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID uint, file multipart.File, header *multipart.FileHeader, ctx context.Context) (uint, *delivery.APIError) {
+func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID uint, file multipart.File, header *multipart.FileHeader, ctx context.Context) (uint, *domain.DomainError) {
 	tx := s.db.Begin().WithContext(ctx)
 	if tx.Error != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "error during start transaction"}
+		return 0, &domain.DomainError{Code: constants.TransactionError, Message: "error during start transaction"}
 	}
 
 	filename, err := s.fileManager.SaveFile(file, header, "uploads")
 	if err != nil {
-		return 0, &delivery.APIError{Code: constants.SaveError, Message: err.Error()}
+		return 0, &domain.DomainError{Code: constants.SaveError, Message: err.Error()}
 	}
 
 	postDTO.CreatorID = creatorID
 	postDTO.ImageName = filename
-	postID, apiErr := s.postRepository.Create(postDTO, tx)
-	if apiErr != nil {
+	postID, domainErr := s.postRepository.Create(postDTO, tx)
+	if domainErr != nil {
 		if err := tx.Rollback().Error; err != nil {
-			return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction rollback failed"}
+			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
 
 		if err := s.fileManager.DeleteFile("/uploads", filename); err != nil {
 			log.Println(err.Error())
 		}
 
-		return 0, apiErr
+		return 0, domainErr
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		return 0, &delivery.APIError{Code: constants.TransactionError, Message: "transaction commit failed"}
+		return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction commit failed"}
 	}
 
 	return postID, nil
 }
 
-func (s PostService) DeletePost(postID, userID uint, ctx context.Context) *delivery.APIError {
+func (s PostService) DeletePost(postID, userID uint, ctx context.Context) *domain.DomainError {
 	tx := s.db.Begin().WithContext(ctx)
 	if tx.Error != nil {
-		return &delivery.APIError{Code: constants.TransactionError, Message: "error during start transaction"}
+		return &domain.DomainError{Code: constants.TransactionError, Message: "error during start transaction"}
 	}
 
-	imageName, apiErr := s.postRepository.GetImageName(postID, tx)
-	if apiErr != nil {
+	imageName, domainErr := s.postRepository.GetImageName(postID, tx)
+	if domainErr != nil {
 		if err := tx.Rollback().Error; err != nil {
-			return &delivery.APIError{Code: constants.TransactionError, Message: "transaction rollback failed"}
+			return &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
-		return apiErr
+		return domainErr
 	}
 
-	if apiErr := s.postRepository.DeletePost(postID, userID, tx); apiErr != nil {
+	if domainErr := s.postRepository.DeletePost(postID, userID, tx); domainErr != nil {
 		if err := tx.Rollback().Error; err != nil {
-			return &delivery.APIError{Code: constants.TransactionError, Message: "transaction rollback failed"}
+			return &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
-		return apiErr
+		return domainErr
 	}
 
 	if err := s.fileManager.DeleteFile("/uploads", imageName); err != nil {
 		if err := tx.Rollback().Error; err != nil {
-			return &delivery.APIError{Code: constants.TransactionError, Message: "transaction rollback failed"}
+			return &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
-		return &delivery.APIError{Code: constants.DeleteError, Message: "post image not deleted"}
+		return &domain.DomainError{Code: constants.DeleteError, Message: "post image not deleted"}
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		return &delivery.APIError{Code: constants.TransactionError, Message: "transaction commit failed"}
+		return &domain.DomainError{Code: constants.TransactionError, Message: "transaction commit failed"}
 	}
 
 	return nil
 }
 
-func (s PostService) GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *delivery.APIError) {
+func (s PostService) GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *domain.DomainError) {
 	post, err := s.postRepository.GetByID(postID, s.db.WithContext(ctx))
 	if err != nil {
 		return nil, err
@@ -122,57 +121,57 @@ func (s PostService) GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO
 	return &dto, nil
 }
 
-func (s PostService) GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError) {
+func (s PostService) GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
 	posts, err := s.postRepository.GetAllByID(userID, s.db.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
 
-	likedPostsID, apiErr := s.postLikeRepository.GetLikedPostsID(userID, s.db.WithContext(ctx))
-	if apiErr != nil {
-		return nil, apiErr
+	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(userID, s.db.WithContext(ctx))
+	if domainErr != nil {
+		return nil, domainErr
 	}
 
 	return s.makePostDTOs(posts, likedPostsID), nil
 }
 
-func (s PostService) GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError) {
+func (s PostService) GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
 	posts, err := s.postRepository.GetAllByUsername(username, s.db.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
 
-	likedPostsID, apiErr := s.postLikeRepository.GetLikedPostsID(currentUserID, s.db.WithContext(ctx))
-	if apiErr != nil {
-		return nil, apiErr
+	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(currentUserID, s.db.WithContext(ctx))
+	if domainErr != nil {
+		return nil, domainErr
 	}
 
 	return s.makePostDTOs(posts, likedPostsID), nil
 }
 
-func (s PostService) GetPostFeed(currentUserID uint, ctx context.Context) ([]dto.PostDTO, *delivery.APIError) {
-	posts, apiErr := s.postRepository.GetPostFeed(s.db.WithContext(ctx))
-	if apiErr != nil {
-		return nil, apiErr
+func (s PostService) GetPostFeed(currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
+	posts, domainErr := s.postRepository.GetPostFeed(s.db.WithContext(ctx))
+	if domainErr != nil {
+		return nil, domainErr
 	}
 
-	likedPostsID, apiErr := s.postLikeRepository.GetLikedPostsID(currentUserID, s.db.WithContext(ctx))
-	if apiErr != nil {
-		return nil, apiErr
+	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(currentUserID, s.db.WithContext(ctx))
+	if domainErr != nil {
+		return nil, domainErr
 	}
 
 	return s.makePostDTOs(posts, likedPostsID), nil
 }
 
-func (s PostService) makePostDTOs(posts []model.Post, likedPostsID []uint) []dto.PostDTO {
+func (s PostService) makePostDTOs(posts []domain.Post, likedPostsID []uint) []dto.PostDTO {
 	dtos := make([]dto.PostDTO, len(posts))
 	for i, post := range posts {
 		dtos[i] = post.ToPostDTO()
 		if slices.Contains(likedPostsID, dtos[i].PostID) {
 			dtos[i].IsLiked = true
 		}
-		commentsCount, apiErr := s.commentRepository.CountCommentsOnPost(dtos[i].PostID, s.db) //TODO: remove - sql query in for
-		if apiErr == nil {
+		commentsCount, domainErr := s.commentRepository.CountCommentsOnPost(dtos[i].PostID, s.db) //TODO: remove - sql query in for
+		if domainErr == nil {
 			dtos[i].CommentsCount = commentsCount
 		}
 	}

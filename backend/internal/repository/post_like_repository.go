@@ -4,30 +4,29 @@ import (
 	"context"
 	"errors"
 	"myapp/internal/constants"
-	"myapp/internal/delivery"
-	"myapp/internal/model"
+	"myapp/internal/domain"
 
 	"gorm.io/gorm"
 )
 
 type PostLikeRepositoryInterface interface {
-	CreateLike(likedUserID uint, postID uint, db *gorm.DB) *delivery.APIError
-	DeleteLike(likedUserID, postID uint, db *gorm.DB) *delivery.APIError
-	LikeExists(userID, postID uint, db *gorm.DB) (bool, *delivery.APIError)
-	GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *delivery.APIError)
+	CreateLike(likedUserID uint, postID uint, db *gorm.DB) *domain.DomainError
+	DeleteLike(likedUserID, postID uint, db *gorm.DB) *domain.DomainError
+	LikeExists(userID, postID uint, db *gorm.DB) (bool, *domain.DomainError)
+	GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *domain.DomainError)
 }
 
 type PostLikeRepository struct{}
 
-func (r PostLikeRepository) GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *delivery.APIError) {
+func (r PostLikeRepository) GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *domain.DomainError) {
 	var postIDs []uint
 
-	result := db.Model(&model.PostLike{}).
+	result := db.Model(&domain.PostLike{}).
 		Where("liked_user_id = ?", userID).
 		Pluck("post_id", &postIDs)
 
 	if result.Error != nil {
-		return nil, &delivery.APIError{
+		return nil, &domain.DomainError{
 			Code:    constants.FindError,
 			Message: "error during finding liked post ids",
 		}
@@ -36,25 +35,25 @@ func (r PostLikeRepository) GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *
 	return postIDs, nil
 }
 
-func (r PostLikeRepository) LikeExists(userID, postID uint, db *gorm.DB) (bool, *delivery.APIError) {
-	var postLike model.PostLike
-	result := db.Model(&model.PostLike{}).Where("liked_user_id = ? AND post_id = ?", userID, postID).First(&postLike)
+func (r PostLikeRepository) LikeExists(userID, postID uint, db *gorm.DB) (bool, *domain.DomainError) {
+	var postLike domain.PostLike
+	result := db.Model(&domain.PostLike{}).Where("liked_user_id = ? AND post_id = ?", userID, postID).First(&postLike)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return false, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return false, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return false, nil
 		}
 
-		return false, &delivery.APIError{Code: constants.FindError, Message: "error during finding like on post"}
+		return false, &domain.DomainError{Code: constants.FindError, Message: "error during finding like on post"}
 	}
 
 	return true, nil
 }
 
-func (r PostLikeRepository) CreateLike(likedUserID uint, postID uint, db *gorm.DB) *delivery.APIError {
-	postLike := model.PostLike{
+func (r PostLikeRepository) CreateLike(likedUserID uint, postID uint, db *gorm.DB) *domain.DomainError {
+	postLike := domain.PostLike{
 		LikedUserID: likedUserID,
 		PostID:      postID,
 	}
@@ -62,27 +61,27 @@ func (r PostLikeRepository) CreateLike(likedUserID uint, postID uint, db *gorm.D
 	result := db.Create(&postLike)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return &delivery.APIError{Code: constants.CreateError, Message: "error during post creating"}
+		return &domain.DomainError{Code: constants.CreateError, Message: "error during post creating"}
 	}
 
 	return nil
 }
 
-func (r PostLikeRepository) DeleteLike(likedUserID, postID uint, db *gorm.DB) *delivery.APIError {
-	result := db.Delete(&model.PostLike{}, "liked_user_id = ? AND post_id = ?", likedUserID, postID)
+func (r PostLikeRepository) DeleteLike(likedUserID, postID uint, db *gorm.DB) *domain.DomainError {
+	result := db.Delete(&domain.PostLike{}, "liked_user_id = ? AND post_id = ?", likedUserID, postID)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return &delivery.APIError{Code: constants.DeleteError, Message: "error during post like deleting"}
+		return &domain.DomainError{Code: constants.DeleteError, Message: "error during post like deleting"}
 	}
 
 	if result.RowsAffected == 0 {
-		return &delivery.APIError{Code: constants.NotFound, Message: "this user like on post not found"}
+		return &domain.DomainError{Code: constants.NotFound, Message: "this user like on post not found"}
 	}
 
 	return nil

@@ -4,6 +4,7 @@ package handler
 import (
 	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
+	"myapp/internal/domain"
 	"myapp/internal/service/authorization"
 	"myapp/internal/utils"
 	"net/http"
@@ -29,19 +30,19 @@ func (h AuthHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 
 	var userDTO dto.UserDTO
 	if err := utils.Deserialize(r.Body, &userDTO); err != nil {
-		http.Error(w, "error during deserialization user", http.StatusBadRequest)
+		utils.WriteError(w, *domain.NewDeserializingError("error during deserializing user"))
 		return
 	}
 
 	validationErr := userDTO.Validate()
 	if validationErr != nil {
-		http.Error(w, validationErr.Error(), http.StatusBadRequest)
+		utils.WriteError(w, *domain.NewValidationError(validationErr.Error()))
 		return
 	}
 
-	authResult, err := h.authService.Auth(userDTO, ctx)
-	if err != nil {
-		http.Error(w, err.Message, http.StatusUnauthorized)
+	authResult, domainErr := h.authService.Auth(userDTO, ctx)
+	if domainErr != nil {
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
@@ -55,13 +56,13 @@ func (h AuthHandler) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 
 	tokenCookie, err := r.Cookie(constants.RefreshTokenKey)
 	if err != nil || tokenCookie.Value == "" {
-		http.Error(w, "refresh token not exists in cookie", http.StatusUnauthorized)
+		utils.WriteError(w, *domain.NewTokenError("refresh token not exists"))
 		return
 	}
 
-	authResult, apiErr := h.authService.Refresh(tokenCookie.Value, ctx)
-	if apiErr != nil {
-		http.Error(w, apiErr.Message, http.StatusUnauthorized)
+	authResult, domainErr := h.authService.Refresh(tokenCookie.Value, ctx)
+	if domainErr != nil {
+		utils.WriteError(w, *domainErr)
 		return
 	}
 

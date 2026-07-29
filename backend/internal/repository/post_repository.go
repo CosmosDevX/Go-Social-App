@@ -4,29 +4,28 @@ import (
 	"context"
 	"errors"
 	"myapp/internal/constants"
-	"myapp/internal/delivery"
 	"myapp/internal/delivery/http/dto"
-	"myapp/internal/model"
+	"myapp/internal/domain"
 
 	"gorm.io/gorm"
 )
 
 type PostRepositoryInterface interface {
-	Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *delivery.APIError)
-	GetByID(postID uint, db *gorm.DB) (*model.Post, *delivery.APIError)
-	GetAllByID(userID uint, db *gorm.DB) ([]model.Post, *delivery.APIError)
-	GetAllByUsername(username string, db *gorm.DB) ([]model.Post, *delivery.APIError)
-	IncrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
-	DecrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError)
-	DeletePost(postID, userID uint, db *gorm.DB) *delivery.APIError
-	GetPostFeed(db *gorm.DB) ([]model.Post, *delivery.APIError)
-	GetImageName(postID uint, db *gorm.DB) (string, *delivery.APIError)
+	Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *domain.DomainError)
+	GetByID(postID uint, db *gorm.DB) (*domain.Post, *domain.DomainError)
+	GetAllByID(userID uint, db *gorm.DB) ([]domain.Post, *domain.DomainError)
+	GetAllByUsername(username string, db *gorm.DB) ([]domain.Post, *domain.DomainError)
+	IncrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError)
+	DecrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError)
+	DeletePost(postID, userID uint, db *gorm.DB) *domain.DomainError
+	GetPostFeed(db *gorm.DB) ([]domain.Post, *domain.DomainError)
+	GetImageName(postID uint, db *gorm.DB) (string, *domain.DomainError)
 }
 
 type PostRepository struct{}
 
-func (r PostRepository) Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *delivery.APIError) {
-	post := model.Post{
+func (r PostRepository) Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *domain.DomainError) {
+	post := domain.Post{
 		PostName:        postDTO.PostName,
 		PostDescription: postDTO.PostDescription,
 		CreatorID:       postDTO.CreatorID,
@@ -36,53 +35,53 @@ func (r PostRepository) Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *deliver
 	result := db.Create(&post)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return 0, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return 0, &delivery.APIError{Code: constants.CreateError, Message: "error during post creating"}
+		return 0, &domain.DomainError{Code: constants.CreateError, Message: "error during post creating"}
 	}
 
 	return post.ID, nil
 }
 
-func (r PostRepository) GetByID(postID uint, db *gorm.DB) (*model.Post, *delivery.APIError) {
-	var post model.Post
+func (r PostRepository) GetByID(postID uint, db *gorm.DB) (*domain.Post, *domain.DomainError) {
+	var post domain.Post
 
 	result := db.First(&post, "id = ?", postID)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, &delivery.APIError{Code: constants.NotFound, Message: "post not found"}
+			return nil, &domain.DomainError{Code: constants.NotFound, Message: "post not found"}
 		}
 
-		return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding post by id"}
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during finding post by id"}
 	}
 
 	return &post, nil
 }
 
-func (r PostRepository) GetAllByID(userID uint, db *gorm.DB) ([]model.Post, *delivery.APIError) {
-	var posts []model.Post
+func (r PostRepository) GetAllByID(userID uint, db *gorm.DB) ([]domain.Post, *domain.DomainError) {
+	var posts []domain.Post
 
 	result := db.Preload("Creator").Find(&posts, "creator_id = ?", userID)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, &delivery.APIError{Code: constants.NotFound, Message: "posts not found"}
+			return nil, &domain.DomainError{Code: constants.NotFound, Message: "posts not found"}
 		}
 
-		return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding posts by user id"}
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during finding posts by user id"}
 	}
 
 	return posts, nil
 }
 
-func (r PostRepository) GetAllByUsername(username string, db *gorm.DB) ([]model.Post, *delivery.APIError) {
-	var posts []model.Post
+func (r PostRepository) GetAllByUsername(username string, db *gorm.DB) ([]domain.Post, *domain.DomainError) {
+	var posts []domain.Post
 
 	result := db.Preload("Creator").Joins("JOIN users ON users.id = posts.creator_id").
 		Where("users.username = ?", username).
@@ -90,22 +89,22 @@ func (r PostRepository) GetAllByUsername(username string, db *gorm.DB) ([]model.
 
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, &delivery.APIError{Code: constants.NotFound, Message: "posts not found"}
+			return nil, &domain.DomainError{Code: constants.NotFound, Message: "posts not found"}
 		}
 
-		return nil, &delivery.APIError{Code: constants.FindError, Message: "error during finding posts by username"}
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during finding posts by username"}
 	}
 
 	return posts, nil
 }
 
-func (r PostRepository) IncrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError) {
+func (r PostRepository) IncrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError) {
 	var likes int
 
-	result := db.Model(&model.Post{}).
+	result := db.Model(&domain.Post{}).
 		Where("id = ?", postID).
 		Update("likes", gorm.Expr("likes + ?", 1)).
 		Select("likes").
@@ -113,22 +112,22 @@ func (r PostRepository) IncrementLikes(postID uint, db *gorm.DB) (int, *delivery
 
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return 0, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return 0, &delivery.APIError{Code: constants.UpdateError, Message: "error during increment likes on post"}
+		return 0, &domain.DomainError{Code: constants.UpdateError, Message: "error during increment likes on post"}
 	}
 
 	if result.RowsAffected == 0 {
-		return 0, &delivery.APIError{Code: constants.FindError, Message: "post not found"}
+		return 0, &domain.DomainError{Code: constants.FindError, Message: "post not found"}
 	}
 
 	return likes, nil
 }
 
-func (r PostRepository) DecrementLikes(postID uint, db *gorm.DB) (int, *delivery.APIError) {
+func (r PostRepository) DecrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError) {
 	var likes int
-	result := db.Model(&model.Post{}).
+	result := db.Model(&domain.Post{}).
 		Where("id = ?", postID).
 		Update("likes", gorm.Expr("likes - ?", 1)).
 		Select("likes").
@@ -136,38 +135,38 @@ func (r PostRepository) DecrementLikes(postID uint, db *gorm.DB) (int, *delivery
 
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return 0, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return 0, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return 0, &delivery.APIError{Code: constants.UpdateError, Message: "error during decrement likes on post"}
+		return 0, &domain.DomainError{Code: constants.UpdateError, Message: "error during decrement likes on post"}
 	}
 
 	if result.RowsAffected == 0 {
-		return 0, &delivery.APIError{Code: constants.FindError, Message: "post not found"}
+		return 0, &domain.DomainError{Code: constants.FindError, Message: "post not found"}
 	}
 
 	return likes, nil
 }
 
-func (r PostRepository) DeletePost(postID, userID uint, db *gorm.DB) *delivery.APIError {
-	result := db.Delete(&model.Post{}, "id = ? AND creator_id = ?", postID, userID)
+func (r PostRepository) DeletePost(postID, userID uint, db *gorm.DB) *domain.DomainError {
+	result := db.Delete(&domain.Post{}, "id = ? AND creator_id = ?", postID, userID)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return &delivery.APIError{Code: constants.DeleteError, Message: "error during deleting the post"}
+		return &domain.DomainError{Code: constants.DeleteError, Message: "error during deleting the post"}
 	}
 
 	if result.RowsAffected == 0 {
-		return &delivery.APIError{Code: constants.NotFound, Message: "post not deleted"}
+		return &domain.DomainError{Code: constants.NotFound, Message: "post not deleted"}
 	}
 
 	return nil
 }
 
-func (r PostRepository) GetPostFeed(db *gorm.DB) ([]model.Post, *delivery.APIError) {
-	var posts []model.Post
+func (r PostRepository) GetPostFeed(db *gorm.DB) ([]domain.Post, *domain.DomainError) {
+	var posts []domain.Post
 	result := db.
 		Preload("Creator").
 		Order("RANDOM()").
@@ -176,27 +175,27 @@ func (r PostRepository) GetPostFeed(db *gorm.DB) ([]model.Post, *delivery.APIErr
 
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return nil, &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return nil, &delivery.APIError{Code: constants.FindError, Message: "error during getting post feed"}
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during getting post feed"}
 	}
 
 	return posts, nil
 }
 
-func (r PostRepository) GetImageName(postID uint, db *gorm.DB) (string, *delivery.APIError) {
+func (r PostRepository) GetImageName(postID uint, db *gorm.DB) (string, *domain.DomainError) {
 	var imageName string
-	result := db.Model(&model.Post{}).Where("id = ?", postID).Select("image_name").Scan(&imageName)
+	result := db.Model(&domain.Post{}).Where("id = ?", postID).Select("image_name").Scan(&imageName)
 	if result.Error != nil {
 		if errors.Is(result.Error, context.DeadlineExceeded) {
-			return "", &delivery.APIError{Code: constants.RequestTimeout, Message: "request timeout"}
+			return "", &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return "", &delivery.APIError{Code: constants.NotFound, Message: "post not found"}
+			return "", &domain.DomainError{Code: constants.NotFound, Message: "post not found"}
 		}
 
-		return "", &delivery.APIError{Code: constants.FindError, Message: "error during getting post image"}
+		return "", &domain.DomainError{Code: constants.FindError, Message: "error during getting post image"}
 	}
 
 	return imageName, nil

@@ -3,8 +3,8 @@ package authorization
 import (
 	"context"
 	"myapp/internal/constants"
-	"myapp/internal/delivery"
 	"myapp/internal/delivery/http/dto"
+	"myapp/internal/domain"
 	"myapp/internal/repository"
 	"strconv"
 
@@ -18,8 +18,8 @@ type AuthResult struct {
 }
 
 type AuthServiceInterface interface {
-	Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult, *delivery.APIError)
-	Refresh(oldRefreshToken string, ctx context.Context) (*AuthResult, *delivery.APIError)
+	Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult, *domain.DomainError)
+	Refresh(oldRefreshToken string, ctx context.Context) (*AuthResult, *domain.DomainError)
 }
 
 type AuthService struct {
@@ -38,63 +38,63 @@ func NewAuthService(userRepo repository.UserRepositoryInterface, refreshTokenRep
 	}
 }
 
-func (s AuthService) Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult, *delivery.APIError) {
+func (s AuthService) Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult, *domain.DomainError) {
 	user, err := s.userRepository.GetUserByName(userDTO.Username, s.db.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(userDTO.Password)); err != nil {
-		return nil, &delivery.APIError{Code: constants.InvalidPassword, Message: "passwords do not match"}
+		return nil, &domain.DomainError{Code: constants.InvalidPassword, Message: "passwords do not match"}
 	}
 
-	authResult, apiErr := s.generateTokenPair(strconv.Itoa(int(user.ID)))
-	if apiErr != nil {
-		return nil, apiErr
+	authResult, domainErr := s.generateTokenPair(strconv.Itoa(int(user.ID)))
+	if domainErr != nil {
+		return nil, domainErr
 	}
 
-	if apiErr := s.refreshTokenRepository.Set(strconv.Itoa(int(user.ID)), authResult.RefreshToken, constants.RefreshTokenExpiresAt, ctx); apiErr != nil {
-		return nil, apiErr
+	if domainErr := s.refreshTokenRepository.Set(strconv.Itoa(int(user.ID)), authResult.RefreshToken, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
+		return nil, domainErr
 	}
 
 	return authResult, nil
 }
 
-func (s AuthService) Refresh(oldRefreshToken string, ctx context.Context) (*AuthResult, *delivery.APIError) {
-	claims, apiErr := s.jwtService.ParseToken(oldRefreshToken)
-	if apiErr != nil {
-		return nil, apiErr
+func (s AuthService) Refresh(oldRefreshToken string, ctx context.Context) (*AuthResult, *domain.DomainError) {
+	claims, domainErr := s.jwtService.ParseToken(oldRefreshToken)
+	if domainErr != nil {
+		return nil, domainErr
 	}
 
-	dbRefreshToken, apiErr := s.refreshTokenRepository.Get(claims.Subject, ctx)
-	if apiErr != nil {
-		return nil, apiErr
+	dbRefreshToken, domainErr := s.refreshTokenRepository.Get(claims.Subject, ctx)
+	if domainErr != nil {
+		return nil, domainErr
 	}
 	if oldRefreshToken != dbRefreshToken {
-		return nil, &delivery.APIError{Code: constants.InvalidTokenError, Message: "invalid refresh token"}
+		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "invalid refresh token"}
 	}
 
-	authResult, apiErr := s.generateTokenPair(claims.Subject)
-	if apiErr != nil {
-		return nil, apiErr
+	authResult, domainErr := s.generateTokenPair(claims.Subject)
+	if domainErr != nil {
+		return nil, domainErr
 	}
 
-	if apiErr := s.refreshTokenRepository.Set(claims.Subject, authResult.RefreshToken, constants.RefreshTokenExpiresAt, ctx); apiErr != nil {
-		return nil, apiErr
+	if domainErr := s.refreshTokenRepository.Set(claims.Subject, authResult.RefreshToken, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
+		return nil, domainErr
 	}
 
 	return authResult, nil
 }
 
-func (s AuthService) generateTokenPair(userID string) (*AuthResult, *delivery.APIError) {
+func (s AuthService) generateTokenPair(userID string) (*AuthResult, *domain.DomainError) {
 	accessToken, jwtError := s.jwtService.GenerateToken(userID, constants.AccessTokenExpiresAt)
 	if jwtError != nil {
-		return nil, &delivery.APIError{Code: constants.AccessTokenError, Message: "error during the access token generating"}
+		return nil, &domain.DomainError{Code: constants.AccessTokenError, Message: "error during the access token generating"}
 	}
 
 	refreshToken, jwtError := s.jwtService.GenerateToken(userID, constants.RefreshTokenExpiresAt)
 	if jwtError != nil {
-		return nil, &delivery.APIError{Code: constants.RefreshTokenError, Message: "error during the refresh token generating"}
+		return nil, &domain.DomainError{Code: constants.RefreshTokenError, Message: "error during the refresh token generating"}
 	}
 
 	return &AuthResult{AccessToken: accessToken, RefreshToken: refreshToken}, nil

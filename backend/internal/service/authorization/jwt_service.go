@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log"
 	"myapp/internal/constants"
-	"myapp/internal/delivery"
+	"myapp/internal/domain"
 	"os"
 	"time"
 
@@ -18,8 +18,8 @@ type UserClaims struct {
 }
 
 type JWTServiceInterface interface {
-	GenerateToken(userID string, expiresAt time.Duration) (string, *delivery.APIError)
-	ParseToken(tokenString string) (*UserClaims, *delivery.APIError)
+	GenerateToken(userID string, expiresAt time.Duration) (string, *domain.DomainError)
+	ParseToken(tokenString string) (*UserClaims, *domain.DomainError)
 }
 
 type JWTService struct {
@@ -38,7 +38,7 @@ func NewJWTService() JWTServiceInterface {
 	}
 }
 
-func (s JWTService) GenerateToken(userID string, expiresAt time.Duration) (string, *delivery.APIError) {
+func (s JWTService) GenerateToken(userID string, expiresAt time.Duration) (string, *domain.DomainError) {
 	claims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "myapp",
@@ -52,13 +52,13 @@ func (s JWTService) GenerateToken(userID string, expiresAt time.Duration) (strin
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(s.secretKey)
 	if err != nil {
-		return "", &delivery.APIError{Code: constants.TokenSignError, Message: "error during the signing token"}
+		return "", &domain.DomainError{Code: constants.TokenSignError, Message: "error during the signing token"}
 	}
 
 	return tokenString, nil
 }
 
-func (s JWTService) ParseToken(tokenString string) (*UserClaims, *delivery.APIError) {
+func (s JWTService) ParseToken(tokenString string) (*UserClaims, *domain.DomainError) {
 	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("incorrect encrypt method")
@@ -68,12 +68,12 @@ func (s JWTService) ParseToken(tokenString string) (*UserClaims, *delivery.APIEr
 	})
 
 	if err != nil {
-		return nil, &delivery.APIError{Code: constants.InvalidTokenError, Message: "invalid token"}
+		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "invalid token"}
 	}
 
 	if userClaims, ok := token.Claims.(*UserClaims); ok && token.Valid {
 		return userClaims, nil
 	}
 
-	return nil, &delivery.APIError{Code: constants.InvalidTokenError, Message: "token is invalid"}
+	return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "token is invalid"}
 }

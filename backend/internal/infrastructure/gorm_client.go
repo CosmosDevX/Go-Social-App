@@ -3,7 +3,7 @@ package infrastructure
 
 import (
 	"log"
-	"myapp/internal/model"
+	"myapp/internal/domain"
 	"os"
 	"time"
 
@@ -35,7 +35,7 @@ func (c *GormClient) Setup() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	if err := db.AutoMigrate(&model.User{}, &model.Post{}, &model.Comment{}, &model.PostLike{}); err != nil {
+	if err := db.AutoMigrate(&domain.User{}, &domain.Post{}, &domain.Comment{}, &domain.PostLike{}); err != nil {
 		log.Fatal(err)
 	}
 

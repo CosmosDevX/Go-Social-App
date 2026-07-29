@@ -1,4 +1,4 @@
-package model
+package domain
 
 import "myapp/internal/delivery/http/dto"
 

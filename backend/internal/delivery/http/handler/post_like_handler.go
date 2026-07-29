@@ -2,6 +2,7 @@ package handler
 
 import (
 	"myapp/internal/delivery/http/middleware"
+	"myapp/internal/domain"
 	"myapp/internal/service"
 	"myapp/internal/utils"
 	"net/http"
@@ -23,19 +24,19 @@ func (h PostLikeHandler) HandleLikePost(w http.ResponseWriter, r *http.Request) 
 
 	userID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
 	if parseErr != nil {
-		http.Error(w, "error during parsing user id", http.StatusBadRequest)
+		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
 	postID, parseErr := strconv.ParseUint(r.PathValue("post_id"), 10, 64)
 	if parseErr != nil {
-		http.Error(w, "error during parsing post id", http.StatusBadRequest)
+		utils.WriteError(w, *domain.NewParseError("error during parse post id"))
 		return
 	}
 
-	likes, apiErr := h.postLikeService.LikePost(uint(postID), userID, ctx)
-	if apiErr != nil {
-		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
+	likes, domainErr := h.postLikeService.LikePost(uint(postID), userID, ctx)
+	if domainErr != nil {
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
@@ -47,19 +48,19 @@ func (h PostLikeHandler) HandleDislikePost(w http.ResponseWriter, r *http.Reques
 
 	userID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
 	if parseErr != nil {
-		http.Error(w, "error during parsing user id", http.StatusBadRequest)
+		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
 	postID, parseErr := strconv.ParseUint(r.PathValue("post_id"), 10, 64)
 	if parseErr != nil {
-		http.Error(w, "error during parsing post id", http.StatusBadRequest)
+		utils.WriteError(w, *domain.NewParseError("error during parse post id"))
 		return
 	}
 
-	likes, apiErr := h.postLikeService.DislikePost(uint(postID), userID, ctx)
-	if apiErr != nil {
-		http.Error(w, apiErr.Message, utils.IdentifyAPIError(apiErr.Code))
+	likes, domainErr := h.postLikeService.DislikePost(uint(postID), userID, ctx)
+	if domainErr != nil {
+		utils.WriteError(w, *domainErr)
 		return
 	}
 

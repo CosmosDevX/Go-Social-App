@@ -91,9 +91,23 @@ api.interceptors.response.use(
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data
+
+    // JSON: { "code": "...", "message": "..." }
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      const obj = data as Record<string, unknown>
+      if (typeof obj.message === 'string' && obj.message.trim()) {
+        return obj.message
+      }
+      if (typeof obj.error === 'string' && obj.error.trim()) {
+        return obj.error
+      }
+    }
+
+    // plain text (на всякий случай)
     if (typeof data === 'string' && data.trim()) {
       return data
     }
+
     if (error.response?.status === 401) return 'Unauthorized'
     if (error.response?.status === 400) return 'Bad Request'
     if (error.response?.status === 404) return 'Not Found'

@@ -1,5 +1,5 @@
-// Package model
-package model
+// Package domain
+package domain
 
 type User struct {
 	ID       uint
