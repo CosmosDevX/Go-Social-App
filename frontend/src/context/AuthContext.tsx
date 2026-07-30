@@ -6,7 +6,12 @@ import {
   useCallback,
   ReactNode,
 } from 'react'
-import { login as apiLogin, register as apiRegister, refreshToken } from '../api/auth'
+import {
+  login as apiLogin,
+  register as apiRegister,
+  refreshToken,
+  logoutRequest,
+} from '../api/auth'
 import { getCurrentProfile } from '../api/user'
 import { getErrorMessage } from '../api/client'
 
@@ -19,7 +24,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (username: string, password: string) => Promise<void>
   register: (username: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
 
@@ -32,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading: true,
   })
 
-  const logout = useCallback(() => {
+  const clearSession = useCallback(() => {
     localStorage.removeItem('access_token')
     setState({
       username: null,
@@ -40,6 +45,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading: false,
     })
   }, [])
+
+  const logout = useCallback(async () => {
+    try {
+      await logoutRequest()
+    } catch {
+      // даже если бэкенд недоступен — чистим локально
+    } finally {
+      clearSession()
+    }
+  }, [clearSession])
 
   const refreshUser = useCallback(async () => {
     try {
@@ -50,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
       })
     } catch {
-      // try refresh
+      // access token протух → пробуем refresh
       try {
         const { access_token } = await refreshToken()
         localStorage.setItem('access_token', access_token)
@@ -61,10 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
         })
       } catch {
-        logout()
+        clearSession()
       }
     }
-  }, [logout])
+  }, [clearSession])
 
   useEffect(() => {
     const token = localStorage.getItem('access_token')
@@ -88,7 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (username: string, password: string) => {
     await apiRegister(username, password)
-    // after register → auto login
     await login(username, password)
   }
 

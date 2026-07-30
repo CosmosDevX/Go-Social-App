@@ -53,8 +53,9 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /auth", authHandler.AuthHandler)
-	mux.HandleFunc("POST /refresh", authHandler.RefreshHandler)
+	mux.HandleFunc("POST /auth", authHandler.HandleAuth)
+	mux.HandleFunc("POST /refresh", authHandler.HandleRefresh)
+	mux.HandleFunc("POST /logout", authMiddleware.Protect(authHandler.HandleLogout))
 
 	mux.HandleFunc("POST /user/create", userHandler.HandleCreateUser)
 	mux.HandleFunc("GET /user/get_username_by_id/{user_id}", userHandler.HandleGetUsernameByID)

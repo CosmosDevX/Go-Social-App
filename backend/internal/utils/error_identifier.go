@@ -15,6 +15,8 @@ func MapError(code string) int {
 		return http.StatusUnauthorized
 	case constants.TokenSignError:
 		return http.StatusUnauthorized
+	case constants.InvalidTokenError:
+		return http.StatusUnauthorized
 	case constants.ValidationError:
 		return http.StatusBadRequest
 	case constants.DeserializingError:

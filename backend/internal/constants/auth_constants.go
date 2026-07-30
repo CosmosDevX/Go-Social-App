@@ -9,4 +9,7 @@ const (
 	RefreshTokenKey       = "refresh_token"
 	RefreshTokenMaxAge    = 3600 * 24 * 7
 	UsernameKey           = "username"
+
+	TokenWhiteListPrefix = ":tokensWhiteList"
+	TokenBlackListPrefix = ":tokensBlackList"
 )

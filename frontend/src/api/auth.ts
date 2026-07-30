@@ -18,3 +18,8 @@ export async function refreshToken(): Promise<AuthResponse> {
   const { data } = await api.post<AuthResponse>('/refresh')
   return data
 }
+
+/** Инвалидирует refresh-токен на бэкенде */
+export async function logoutRequest(): Promise<void> {
+  await api.post('/logout')
+}

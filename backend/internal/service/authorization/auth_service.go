@@ -20,6 +20,7 @@ type AuthResult struct {
 type AuthServiceInterface interface {
 	Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult, *domain.DomainError)
 	Refresh(oldRefreshToken string, ctx context.Context) (*AuthResult, *domain.DomainError)
+	Logout(userID, refreshToken string, ctx context.Context) *domain.DomainError
 }
 
 type AuthService struct {
@@ -53,7 +54,7 @@ func (s AuthService) Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult
 		return nil, domainErr
 	}
 
-	if domainErr := s.refreshTokenRepository.Set(strconv.Itoa(int(user.ID)), authResult.RefreshToken, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
+	if domainErr := s.refreshTokenRepository.Set(strconv.Itoa(int(user.ID)), authResult.RefreshToken, constants.TokenWhiteListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
 		return nil, domainErr
 	}
 
@@ -66,11 +67,19 @@ func (s AuthService) Refresh(oldRefreshToken string, ctx context.Context) (*Auth
 		return nil, domainErr
 	}
 
-	dbRefreshToken, domainErr := s.refreshTokenRepository.Get(claims.Subject, ctx)
+	dbRefreshToken, domainErr := s.refreshTokenRepository.Get(claims.Subject, constants.TokenWhiteListPrefix, ctx)
 	if domainErr != nil {
 		return nil, domainErr
 	}
 	if oldRefreshToken != dbRefreshToken {
+		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "invalid refresh token"}
+	}
+
+	blacklistRefreshToken, domainErr := s.refreshTokenRepository.Get(claims.Subject, constants.TokenBlackListPrefix, ctx)
+	if domainErr != nil {
+		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "error during get refresh token in blacklist"}
+	}
+	if blacklistRefreshToken == oldRefreshToken {
 		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "invalid refresh token"}
 	}
 
@@ -79,11 +88,27 @@ func (s AuthService) Refresh(oldRefreshToken string, ctx context.Context) (*Auth
 		return nil, domainErr
 	}
 
-	if domainErr := s.refreshTokenRepository.Set(claims.Subject, authResult.RefreshToken, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
+	if domainErr := s.refreshTokenRepository.Set(claims.Subject, authResult.RefreshToken, constants.TokenWhiteListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
 		return nil, domainErr
 	}
 
 	return authResult, nil
+}
+
+func (s AuthService) Logout(userID, refreshToken string, ctx context.Context) *domain.DomainError {
+	if _, domainErr := s.refreshTokenRepository.Get(userID, constants.TokenWhiteListPrefix, ctx); domainErr != nil {
+		return domainErr
+	}
+
+	if domainErr := s.refreshTokenRepository.Delete(userID, constants.TokenWhiteListPrefix, ctx); domainErr != nil {
+		return domainErr
+	}
+
+	if domainErr := s.refreshTokenRepository.Set(userID, refreshToken, constants.TokenBlackListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
+		return domainErr
+	}
+
+	return nil
 }
 
 func (s AuthService) generateTokenPair(userID string) (*AuthResult, *domain.DomainError) {
