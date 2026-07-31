@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"myapp/internal/config"
 	"myapp/internal/delivery/http/handler"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/infrastructure"
@@ -18,8 +19,11 @@ import (
 )
 
 func main() {
+	config := config.Config{}
+	config.Load()
+
 	//initialize clients
-	gormClient := infrastructure.GormClient{}
+	gormClient := infrastructure.GormClient{ConnectionString: config.DBConnectionString}
 	gormClient.Setup()
 	redisClient := infrastructure.NewRedisClient()
 
@@ -34,7 +38,7 @@ func main() {
 	refreshTokenRepository := repository.NewRefreshTokenRepository(redisClient.GetClient())
 
 	//initialize services
-	jwtService := authorization.NewJWTService()
+	jwtService := authorization.NewJWTService(config.SecretKey)
 	authService := authorization.NewAuthService(userRepository, refreshTokenRepository, jwtService, gormClient.GetDB())
 	userService := service.NewUserService(userRepository, gormClient.GetDB())
 	postService := service.NewPostService(postRepository, postLikeRepository, commentRepository, fileManager, gormClient.GetDB())

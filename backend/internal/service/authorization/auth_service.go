@@ -5,8 +5,8 @@ import (
 	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/domain"
-	"myapp/internal/repository"
 	"strconv"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -17,20 +17,24 @@ type AuthResult struct {
 	RefreshToken string
 }
 
-type AuthServiceInterface interface {
-	Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult, *domain.DomainError)
-	Refresh(oldRefreshToken string, ctx context.Context) (*AuthResult, *domain.DomainError)
-	Logout(userID, refreshToken string, ctx context.Context) *domain.DomainError
+type UserGetter interface {
+	GetUserByName(username string, db *gorm.DB) (*domain.User, *domain.DomainError)
+}
+
+type RefreshTokenRepository interface {
+	Set(userID, refreshToken, prefix string, ttl time.Duration, ctx context.Context) *domain.DomainError
+	Delete(userID, prefix string, ctx context.Context) *domain.DomainError
+	Get(userID, prefix string, ctx context.Context) (string, *domain.DomainError)
 }
 
 type AuthService struct {
-	userRepository         repository.UserRepositoryInterface
-	refreshTokenRepository repository.RefreshTokenRepositoryInterface
+	userRepository         UserGetter
+	refreshTokenRepository RefreshTokenRepository
 	jwtService             JWTServiceInterface
 	db                     *gorm.DB
 }
 
-func NewAuthService(userRepo repository.UserRepositoryInterface, refreshTokenRepo repository.RefreshTokenRepositoryInterface, jwtService JWTServiceInterface, db *gorm.DB) AuthServiceInterface {
+func NewAuthService(userRepo UserGetter, refreshTokenRepo RefreshTokenRepository, jwtService JWTServiceInterface, db *gorm.DB) AuthService {
 	return AuthService{
 		userRepository:         userRepo,
 		refreshTokenRepository: refreshTokenRepo,

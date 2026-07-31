@@ -11,12 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserRepositoryInterface interface {
-	GetUserByName(username string, db *gorm.DB) (*domain.User, *domain.DomainError)
-	CreateUser(userDTO dto.UserDTO, db *gorm.DB) (uint, *domain.DomainError)
-	GetUsernameByID(userID uint, db *gorm.DB) (string, *domain.DomainError)
-}
-
 type UserRepository struct{}
 
 func (r UserRepository) GetUserByName(username string, db *gorm.DB) (*domain.User, *domain.DomainError) {

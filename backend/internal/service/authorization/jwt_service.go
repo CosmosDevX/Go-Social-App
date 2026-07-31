@@ -3,14 +3,11 @@ package authorization
 
 import (
 	"errors"
-	"log"
 	"myapp/internal/constants"
 	"myapp/internal/domain"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
 )
 
 type UserClaims struct {
@@ -26,15 +23,9 @@ type JWTService struct {
 	secretKey []byte
 }
 
-func NewJWTService() JWTServiceInterface {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("error during loading .env file")
-	}
-
-	key := os.Getenv("SECRET_KEY")
-
+func NewJWTService(secretKey string) JWTServiceInterface {
 	return JWTService{
-		secretKey: []byte(key),
+		secretKey: []byte(secretKey),
 	}
 }
 

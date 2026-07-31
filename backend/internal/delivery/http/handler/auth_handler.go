@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"context"
 	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
@@ -12,11 +13,17 @@ import (
 	"strconv"
 )
 
-type AuthHandler struct {
-	authService authorization.AuthServiceInterface
+type AuthService interface {
+	Auth(userDTO dto.UserDTO, ctx context.Context) (*authorization.AuthResult, *domain.DomainError)
+	Refresh(oldRefreshToken string, ctx context.Context) (*authorization.AuthResult, *domain.DomainError)
+	Logout(userID, refreshToken string, ctx context.Context) *domain.DomainError
 }
 
-func NewAuthHandler(authService authorization.AuthServiceInterface) AuthHandler {
+type AuthHandler struct {
+	authService AuthService
+}
+
+func NewAuthHandler(authService AuthService) AuthHandler {
 	return AuthHandler{
 		authService: authService,
 	}

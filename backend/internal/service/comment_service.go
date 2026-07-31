@@ -4,23 +4,22 @@ import (
 	"context"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/domain"
-	"myapp/internal/repository"
 
 	"gorm.io/gorm"
 )
 
-type CommentServiceInterface interface {
-	DeleteComment(commentID, userID uint, ctx context.Context) *domain.DomainError
-	CreateComment(commentDTO dto.CommentDTO, creatorID, postID uint, ctx context.Context) (uint, *domain.DomainError)
-	GetAllCommentsByPostID(postID uint, ctx context.Context) ([]dto.CommentDTO, *domain.DomainError)
+type CommentRepository interface {
+	Delete(commentID, userID uint, db *gorm.DB) *domain.DomainError
+	Create(commentDTO dto.CommentDTO, db *gorm.DB) (uint, *domain.DomainError)
+	GetAllByPostID(postID uint, db *gorm.DB) ([]domain.Comment, *domain.DomainError)
 }
 
 type CommentService struct {
-	commentRepository repository.CommentRepositoryInterface
+	commentRepository CommentRepository
 	db                *gorm.DB
 }
 
-func NewCommentService(commentRepository repository.CommentRepositoryInterface, db *gorm.DB) CommentServiceInterface {
+func NewCommentService(commentRepository CommentRepository, db *gorm.DB) CommentService {
 	return CommentService{
 		commentRepository: commentRepository,
 		db:                db,

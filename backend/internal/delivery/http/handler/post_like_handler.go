@@ -1,19 +1,24 @@
 package handler
 
 import (
+	"context"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/domain"
-	"myapp/internal/service"
 	"myapp/internal/utils"
 	"net/http"
 	"strconv"
 )
 
-type PostLikeHandler struct {
-	postLikeService service.PostLikeServiceInterface
+type PostLikeService interface {
+	LikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError)
+	DislikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError)
 }
 
-func NewPostLikeHandler(postLikeService service.PostLikeServiceInterface) PostLikeHandler {
+type PostLikeHandler struct {
+	postLikeService PostLikeService
+}
+
+func NewPostLikeHandler(postLikeService PostLikeService) PostLikeHandler {
 	return PostLikeHandler{
 		postLikeService: postLikeService,
 	}

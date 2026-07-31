@@ -4,23 +4,28 @@ import (
 	"context"
 	"myapp/internal/constants"
 	"myapp/internal/domain"
-	"myapp/internal/repository"
 
 	"gorm.io/gorm"
 )
 
-type PostLikeServiceInterface interface {
-	LikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError)
-	DislikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError)
+type LikeUpdater interface {
+	IncrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError)
+	DecrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError)
+}
+
+type PostLikeRepository interface {
+	CreateLike(likedUserID uint, postID uint, db *gorm.DB) *domain.DomainError
+	DeleteLike(likedUserID, postID uint, db *gorm.DB) *domain.DomainError
+	LikeExists(userID, postID uint, db *gorm.DB) (bool, *domain.DomainError)
 }
 
 type PostLikeService struct {
-	postRepository     repository.PostRepositoryInterface
-	postLikeRepository repository.PostLikeRepositoryInterface
+	postRepository     LikeUpdater
+	postLikeRepository PostLikeRepository
 	db                 *gorm.DB
 }
 
-func NewPostLikeService(postRepository repository.PostRepositoryInterface, postLikeRepository repository.PostLikeRepositoryInterface, db *gorm.DB) PostLikeServiceInterface {
+func NewPostLikeService(postRepository LikeUpdater, postLikeRepository PostLikeRepository, db *gorm.DB) PostLikeService {
 	return PostLikeService{
 		postRepository:     postRepository,
 		postLikeRepository: postLikeRepository,

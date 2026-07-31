@@ -6,7 +6,6 @@ import (
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/domain"
-	"myapp/internal/repository"
 	"myapp/internal/utils"
 	"strconv"
 
@@ -14,18 +13,18 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserServiceInterface interface {
-	CreateUser(userDTO *dto.UserDTO, ctx context.Context) (uint, *domain.DomainError)
-	CurrentUserProfile(ctx context.Context) (string, *domain.DomainError)
-	GetUsernameByID(pathValue string, ctx context.Context) (string, *domain.DomainError)
+type UserRepository interface {
+	GetUserByName(username string, db *gorm.DB) (*domain.User, *domain.DomainError)
+	CreateUser(userDTO dto.UserDTO, db *gorm.DB) (uint, *domain.DomainError)
+	GetUsernameByID(userID uint, db *gorm.DB) (string, *domain.DomainError)
 }
 
 type UserService struct {
-	userRepository repository.UserRepositoryInterface
+	userRepository UserRepository
 	db             *gorm.DB
 }
 
-func NewUserService(userRepository repository.UserRepositoryInterface, db *gorm.DB) UserServiceInterface {
+func NewUserService(userRepository UserRepository, db *gorm.DB) UserService {
 	return UserService{
 		userRepository: userRepository,
 		db:             db,

@@ -10,18 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type PostRepositoryInterface interface {
-	Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *domain.DomainError)
-	GetByID(postID uint, db *gorm.DB) (*domain.Post, *domain.DomainError)
-	GetAllByID(userID uint, db *gorm.DB) ([]domain.Post, *domain.DomainError)
-	GetAllByUsername(username string, db *gorm.DB) ([]domain.Post, *domain.DomainError)
-	IncrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError)
-	DecrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError)
-	DeletePost(postID, userID uint, db *gorm.DB) *domain.DomainError
-	GetPostFeed(db *gorm.DB) ([]domain.Post, *domain.DomainError)
-	GetImageName(postID uint, db *gorm.DB) (string, *domain.DomainError)
-}
-
 type PostRepository struct{}
 
 func (r PostRepository) Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *domain.DomainError) {

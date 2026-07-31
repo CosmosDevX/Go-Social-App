@@ -10,13 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type CommentRepositoryInterface interface {
-	Delete(commentID, userID uint, db *gorm.DB) *domain.DomainError
-	Create(commentDTO dto.CommentDTO, db *gorm.DB) (uint, *domain.DomainError)
-	GetAllByPostID(postID uint, db *gorm.DB) ([]domain.Comment, *domain.DomainError)
-	CountCommentsOnPost(postID uint, db *gorm.DB) (int, *domain.DomainError)
-}
-
 type CommentRepository struct{}
 
 func (r CommentRepository) Create(commentDTO dto.CommentDTO, db *gorm.DB) (uint, *domain.DomainError) {

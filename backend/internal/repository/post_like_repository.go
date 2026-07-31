@@ -9,13 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type PostLikeRepositoryInterface interface {
-	CreateLike(likedUserID uint, postID uint, db *gorm.DB) *domain.DomainError
-	DeleteLike(likedUserID, postID uint, db *gorm.DB) *domain.DomainError
-	LikeExists(userID, postID uint, db *gorm.DB) (bool, *domain.DomainError)
-	GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *domain.DomainError)
-}
-
 type PostLikeRepository struct{}
 
 func (r PostLikeRepository) GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *domain.DomainError) {

@@ -4,26 +4,19 @@ package infrastructure
 import (
 	"log"
 	"myapp/internal/domain"
-	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 type GormClient struct {
-	db *gorm.DB
+	ConnectionString string
+	db               *gorm.DB
 }
 
 func (c *GormClient) Setup() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("error during loading .env file")
-	}
-
-	dsn := os.Getenv("CONNECTION_STRING")
-
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(postgres.Open(c.ConnectionString), &gorm.Config{
 		/*Logger: logger.Default.LogMode(logger.Silent),*/
 	})
 	if err != nil {

@@ -11,17 +11,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type RefreshTokenRepositoryInterface interface {
-	Set(userID, refreshToken, prefix string, ttl time.Duration, ctx context.Context) *domain.DomainError
-	Delete(userID, prefix string, ctx context.Context) *domain.DomainError
-	Get(userID, prefix string, ctx context.Context) (string, *domain.DomainError)
-}
-
 type RefreshTokenRepository struct {
 	redisClient *redis.Client
 }
 
-func NewRefreshTokenRepository(redisClient *redis.Client) RefreshTokenRepositoryInterface {
+func NewRefreshTokenRepository(redisClient *redis.Client) RefreshTokenRepository {
 	return RefreshTokenRepository{
 		redisClient: redisClient,
 	}

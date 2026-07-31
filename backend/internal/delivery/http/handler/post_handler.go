@@ -1,21 +1,30 @@
 package handler
 
 import (
+	"context"
+	"mime/multipart"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/domain"
-	"myapp/internal/service"
 	"myapp/internal/utils"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-type PostHandler struct {
-	postService service.PostServiceInterface
+type PostService interface {
+	CreatePost(postDTO dto.PostDTO, creatorID uint, file multipart.File, header *multipart.FileHeader, ctx context.Context) (uint, *domain.DomainError)
+	GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
+	GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
+	DeletePost(postID, userID uint, ctx context.Context) *domain.DomainError
+	GetPostFeed(currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
 }
 
-func NewPostHandler(postService service.PostServiceInterface) PostHandler {
+type PostHandler struct {
+	postService PostService
+}
+
+func NewPostHandler(postService PostService) PostHandler {
 	return PostHandler{
 		postService: postService,
 	}

@@ -7,33 +7,41 @@ import (
 	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/domain"
-	"myapp/internal/repository"
 	"myapp/internal/utils"
 	"slices"
 
 	"gorm.io/gorm"
 )
 
-type PostServiceInterface interface {
-	CreatePost(postDTO dto.PostDTO, creatorID uint, file multipart.File, header *multipart.FileHeader, ctx context.Context) (uint, *domain.DomainError)
-	GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *domain.DomainError)
-	GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
-	GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
-	DeletePost(postID, userID uint, ctx context.Context) *domain.DomainError
-	GetPostFeed(currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
+type CommentCounter interface {
+	CountCommentsOnPost(postID uint, db *gorm.DB) (int, *domain.DomainError)
+}
+
+type PostRepository interface {
+	Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *domain.DomainError)
+	GetByID(postID uint, db *gorm.DB) (*domain.Post, *domain.DomainError)
+	GetAllByID(userID uint, db *gorm.DB) ([]domain.Post, *domain.DomainError)
+	GetAllByUsername(username string, db *gorm.DB) ([]domain.Post, *domain.DomainError)
+	DeletePost(postID, userID uint, db *gorm.DB) *domain.DomainError
+	GetPostFeed(db *gorm.DB) ([]domain.Post, *domain.DomainError)
+	GetImageName(postID uint, db *gorm.DB) (string, *domain.DomainError)
+}
+
+type PostLikeGetter interface {
+	GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *domain.DomainError)
 }
 
 type PostService struct {
 	fileManager        utils.FileManagerInterface
-	postRepository     repository.PostRepositoryInterface
-	postLikeRepository repository.PostLikeRepositoryInterface
-	commentRepository  repository.CommentRepositoryInterface
+	postRepository     PostRepository
+	postLikeRepository PostLikeGetter
+	commentRepository  CommentCounter
 	db                 *gorm.DB
 }
 
-func NewPostService(postRepository repository.PostRepositoryInterface,
-	postLikeRepository repository.PostLikeRepositoryInterface, commentRepository repository.CommentRepositoryInterface,
-	fileManager utils.FileManagerInterface, db *gorm.DB) PostServiceInterface {
+func NewPostService(postRepository PostRepository,
+	postLikeRepository PostLikeGetter, commentRepository CommentCounter,
+	fileManager utils.FileManagerInterface, db *gorm.DB) PostService {
 	return PostService{
 		fileManager:        fileManager,
 		postRepository:     postRepository,

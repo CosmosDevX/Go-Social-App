@@ -1,20 +1,26 @@
 package handler
 
 import (
+	"context"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/domain"
-	"myapp/internal/service"
 	"myapp/internal/utils"
 	"net/http"
 	"strconv"
 )
 
-type CommentHandler struct {
-	commentService service.CommentServiceInterface
+type CommentService interface {
+	DeleteComment(commentID, userID uint, ctx context.Context) *domain.DomainError
+	CreateComment(commentDTO dto.CommentDTO, creatorID, postID uint, ctx context.Context) (uint, *domain.DomainError)
+	GetAllCommentsByPostID(postID uint, ctx context.Context) ([]dto.CommentDTO, *domain.DomainError)
 }
 
-func NewCommentHandler(commentService service.CommentServiceInterface) CommentHandler {
+type CommentHandler struct {
+	commentService CommentService
+}
+
+func NewCommentHandler(commentService CommentService) CommentHandler {
 	return CommentHandler{
 		commentService: commentService,
 	}

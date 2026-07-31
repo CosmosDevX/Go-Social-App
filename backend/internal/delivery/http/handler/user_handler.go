@@ -1,18 +1,24 @@
 package handler
 
 import (
+	"context"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/domain"
-	"myapp/internal/service"
 	"myapp/internal/utils"
 	"net/http"
 )
 
-type UserHandler struct {
-	userService service.UserServiceInterface
+type UserService interface {
+	CreateUser(userDTO *dto.UserDTO, ctx context.Context) (uint, *domain.DomainError)
+	CurrentUserProfile(ctx context.Context) (string, *domain.DomainError)
+	GetUsernameByID(pathValue string, ctx context.Context) (string, *domain.DomainError)
 }
 
-func NewUserHandler(userService service.UserServiceInterface) UserHandler {
+type UserHandler struct {
+	userService UserService
+}
+
+func NewUserHandler(userService UserService) UserHandler {
 	return UserHandler{
 		userService: userService,
 	}
