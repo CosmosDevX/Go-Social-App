@@ -3,63 +3,99 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/domain"
 
-	"gorm.io/gorm"
+	"github.com/jmoiron/sqlx"
 )
 
-type UserRepository struct{}
+type UserRepository struct {
+	DB *sqlx.DB
+}
 
-func (r UserRepository) GetUserByName(username string, db *gorm.DB) (*domain.User, *domain.DomainError) {
+func (r UserRepository) GetUserByName(ctx context.Context, username string) (*domain.User, *domain.DomainError) {
+	query := `SELECT * FROM users WHERE username = $1`
 	var user domain.User
-	result := db.First(&user, "username = ?", username)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+	err := r.DB.GetContext(ctx, &user, query, username)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &domain.DomainError{Code: constants.NotFound, Message: "user not found"}
 		}
 
-		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during finding user by name"}
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during get user by name"}
 	}
 
 	return &user, nil
 }
 
-func (r UserRepository) CreateUser(userDTO dto.UserDTO, db *gorm.DB) (uint, *domain.DomainError) {
-	user := domain.User{Username: userDTO.Username, Password: userDTO.Password}
-	result := db.Create(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+func (r UserRepository) CreateUser(ctx context.Context, userDTO dto.UserDTO) (int, *domain.DomainError) {
+	query := `INSERT INTO users (username, password) VALUES($1, $2) RETURNING id`
+	var id int
+	err := r.DB.QueryRowContext(ctx, query, userDTO.Username, userDTO.Password).Scan(&id)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return 0, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
-		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-			return 0, &domain.DomainError{Code: constants.UniqueViolation, Message: "username already taken"}
-		}
 
-		return 0, &domain.DomainError{Code: constants.CreateError, Message: "error during user creating"}
+		return 0, &domain.DomainError{Code: constants.CreateError, Message: "error during create user"}
 	}
 
-	return user.ID, nil
+	return id, nil
 }
 
-func (r UserRepository) GetUsernameByID(userID uint, db *gorm.DB) (string, *domain.DomainError) {
-	var username string
-	result := db.Model(&domain.User{}).Where("id = ?", userID).Select("username").Scan(&username)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+func (r UserRepository) GetUsernameByID(ctx context.Context, userID int) (string, *domain.DomainError) {
+	query := `SELECT username FROM users WHERE id = $1`
+	var user domain.User
+	err := r.DB.GetContext(ctx, &user, query, userID)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return "", &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return "", &domain.DomainError{Code: constants.NotFound, Message: "username not found not found"}
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", &domain.DomainError{Code: constants.NotFound, Message: "username not found"}
 		}
 
-		return "", &domain.DomainError{Code: constants.FindError, Message: "error during find username by user id"}
+		return "", &domain.DomainError{Code: constants.FindError, Message: "error during get username by user id"}
 	}
 
-	return username, nil
+	return user.Username, nil
+}
+
+func (r UserRepository) GetUsernameByIDs(ctx context.Context, ids []int) ([]string, *domain.DomainError) {
+	if len(ids) == 0 {
+		return nil, &domain.DomainError{Code: constants.NotFound, Message: "usernames not found"}
+	}
+
+	query, args, err := sqlx.In(`SELECT username FROM users WHERE id IN (?)`, ids)
+	if err != nil {
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during get usernames by ids"}
+	}
+
+	query = r.DB.Rebind(query)
+
+	var users []domain.User
+	err = r.DB.SelectContext(ctx, &users, query, args...)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during get usernames by ids"}
+	}
+
+	if len(users) == 0 {
+		return nil, &domain.DomainError{Code: constants.NotFound, Message: "usernames not found"}
+	}
+
+	usernames := make([]string, len(users))
+	for i := range users {
+		usernames[i] = users[i].Username
+	}
+
+	return usernames, nil
 }

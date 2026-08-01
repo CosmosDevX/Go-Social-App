@@ -18,7 +18,7 @@ type AuthResult struct {
 }
 
 type UserGetter interface {
-	GetUserByName(username string, db *gorm.DB) (*domain.User, *domain.DomainError)
+	GetUserByName(ctx context.Context, username string) (*domain.User, *domain.DomainError)
 }
 
 type RefreshTokenRepository interface {
@@ -28,15 +28,15 @@ type RefreshTokenRepository interface {
 }
 
 type AuthService struct {
-	userRepository         UserGetter
+	userGetter             UserGetter
 	refreshTokenRepository RefreshTokenRepository
 	jwtService             JWTServiceInterface
 	db                     *gorm.DB
 }
 
-func NewAuthService(userRepo UserGetter, refreshTokenRepo RefreshTokenRepository, jwtService JWTServiceInterface, db *gorm.DB) AuthService {
+func NewAuthService(userGetter UserGetter, refreshTokenRepo RefreshTokenRepository, jwtService JWTServiceInterface, db *gorm.DB) AuthService {
 	return AuthService{
-		userRepository:         userRepo,
+		userGetter:             userGetter,
 		refreshTokenRepository: refreshTokenRepo,
 		jwtService:             jwtService,
 		db:                     db,
@@ -44,7 +44,7 @@ func NewAuthService(userRepo UserGetter, refreshTokenRepo RefreshTokenRepository
 }
 
 func (s AuthService) Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult, *domain.DomainError) {
-	user, err := s.userRepository.GetUserByName(userDTO.Username, s.db.WithContext(ctx))
+	user, err := s.userGetter.GetUserByName(ctx, userDTO.Username)
 	if err != nil {
 		return nil, err
 	}

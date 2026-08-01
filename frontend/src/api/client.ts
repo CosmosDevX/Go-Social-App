@@ -119,6 +119,23 @@ export function getErrorMessage(error: unknown): string {
 }
 
 /** URL картинки поста (или null, если нет) */
+/** NotFound (404) — нормальная ситуация для пустых списков постов/комментариев */
+export function isNotFoundError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false
+  if (error.response?.status === 404) return true
+  const data = error.response?.data
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const obj = data as Record<string, unknown>
+    const code = String(obj.code ?? '').toLowerCase()
+    const message = String(obj.message ?? '').toLowerCase()
+    if (code.includes('notfound') || code.includes('not_found') || code === '404') return true
+    if (message.includes('not found') || message === 'notfound') return true
+  }
+  if (typeof data === 'string' && data.toLowerCase().includes('not found')) return true
+  return false
+}
+
+/** URL картинки поста (или null, если нет) */
 export function getPostImageUrl(imageName: string | null | undefined): string | null {
   if (!imageName || !imageName.trim()) return null
   return `${API_BASE}/uploads/${imageName}`

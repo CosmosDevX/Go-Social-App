@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"os"
 	"path/filepath"
@@ -31,6 +30,10 @@ func NewFileManager() FileManagerInterface {
 }
 
 func (m FileManager) SaveFile(file multipart.File, header *multipart.FileHeader, saveDirectory string) (string, error) {
+	if file == nil || header == nil {
+		return "", nil
+	}
+
 	fileExt := filepath.Ext(header.Filename)
 	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), fileExt)
 	savePath := filepath.Join(saveDirectory, filename)
@@ -49,8 +52,11 @@ func (m FileManager) SaveFile(file multipart.File, header *multipart.FileHeader,
 }
 
 func (m FileManager) DeleteFile(path, filename string) error {
+	if filename == "" {
+		return nil
+	}
+
 	filePath := filepath.Join(m.RootDir+path, filename)
-	log.Println(filePath)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return fmt.Errorf("file %s not exist in %s", filename, path)

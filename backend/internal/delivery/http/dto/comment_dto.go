@@ -6,11 +6,11 @@ import (
 )
 
 type CommentDTO struct {
-	CommentID       uint   `json:"comment_id"`
-	PostID          uint   `json:"post_id"`
+	CommentID       int    `json:"comment_id"`
+	PostID          int    `json:"post_id"`
 	CommentText     string `json:"comment_text"`
 	CreatorUsername string `json:"creator_username"`
-	CreatorID       uint   `json:"creator_id"`
+	CreatorID       int    `json:"creator_id"`
 }
 
 func (dto CommentDTO) Validate() error {

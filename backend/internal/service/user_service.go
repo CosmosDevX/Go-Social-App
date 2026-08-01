@@ -14,9 +14,9 @@ import (
 )
 
 type UserRepository interface {
-	GetUserByName(username string, db *gorm.DB) (*domain.User, *domain.DomainError)
-	CreateUser(userDTO dto.UserDTO, db *gorm.DB) (uint, *domain.DomainError)
-	GetUsernameByID(userID uint, db *gorm.DB) (string, *domain.DomainError)
+	GetUserByName(ctx context.Context, username string) (*domain.User, *domain.DomainError)
+	CreateUser(ctx context.Context, userDTO dto.UserDTO) (int, *domain.DomainError)
+	GetUsernameByID(ctx context.Context, userID int) (string, *domain.DomainError)
 }
 
 type UserService struct {
@@ -31,14 +31,14 @@ func NewUserService(userRepository UserRepository, db *gorm.DB) UserService {
 	}
 }
 
-func (s UserService) CreateUser(userDTO *dto.UserDTO, ctx context.Context) (uint, *domain.DomainError) {
+func (s UserService) CreateUser(userDTO dto.UserDTO, ctx context.Context) (int, *domain.DomainError) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userDTO.Password), 10)
 	if err != nil {
 		return 0, &domain.DomainError{Code: constants.InvalidPassword, Message: "error during password hashing"}
 	}
 	userDTO.Password = string(hashedPassword)
 
-	id, domainErr := s.userRepository.CreateUser(*userDTO, s.db.WithContext(ctx))
+	id, domainErr := s.userRepository.CreateUser(ctx, userDTO)
 	if domainErr != nil {
 		return 0, domainErr
 	}
@@ -52,7 +52,7 @@ func (s UserService) CurrentUserProfile(ctx context.Context) (string, *domain.Do
 		return "", &domain.DomainError{Code: constants.ParseError, Message: parseErr.Error()}
 	}
 
-	username, domainErr := s.userRepository.GetUsernameByID(parsedUserID, s.db.WithContext(ctx))
+	username, domainErr := s.userRepository.GetUsernameByID(ctx, int(parsedUserID))
 	if domainErr != nil {
 		return "", domainErr
 	}
@@ -61,12 +61,12 @@ func (s UserService) CurrentUserProfile(ctx context.Context) (string, *domain.Do
 }
 
 func (s UserService) GetUsernameByID(pathValue string, ctx context.Context) (string, *domain.DomainError) {
-	userID, parseErr := strconv.ParseUint(pathValue, 10, 64)
+	userID, parseErr := strconv.ParseInt(pathValue, 10, 64)
 	if parseErr != nil {
 		return "", &domain.DomainError{Code: constants.ParseError, Message: "error during parsing user id"}
 	}
 
-	username, domainErr := s.userRepository.GetUsernameByID(uint(userID), s.db.WithContext(ctx))
+	username, domainErr := s.userRepository.GetUsernameByID(ctx, int(userID))
 	if domainErr != nil {
 		return "", domainErr
 	}

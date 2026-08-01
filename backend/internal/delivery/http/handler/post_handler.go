@@ -40,18 +40,18 @@ func (h PostHandler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, header, err := r.FormFile("post_image")
-	contentType := header.Header.Get("Content-Type")
-	if err != nil {
-		utils.WriteError(w, *domain.NewFileError("file not found"))
-		return
+	file, header, _ := r.FormFile("post_image")
+	var contentType string
+	if header != nil {
+		contentType = header.Header.Get("Content-Type")
 	}
-	if !strings.HasPrefix(contentType, "image/") {
+	if file != nil && !strings.HasPrefix(contentType, "image/") {
 		utils.WriteError(w, *domain.NewFileError("invalid file type"))
 		return
 	}
-
-	defer file.Close()
+	if file != nil {
+		defer file.Close()
+	}
 
 	postName := r.FormValue("post_name")
 	postDescription := r.FormValue("post_description")

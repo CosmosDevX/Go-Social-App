@@ -9,9 +9,9 @@ import (
 )
 
 type CommentRepository interface {
-	Delete(commentID, userID uint, db *gorm.DB) *domain.DomainError
-	Create(commentDTO dto.CommentDTO, db *gorm.DB) (uint, *domain.DomainError)
-	GetAllByPostID(postID uint, db *gorm.DB) ([]domain.Comment, *domain.DomainError)
+	Delete(ctx context.Context, commentID, userID int) *domain.DomainError
+	Create(ctx context.Context, commentDTO dto.CommentDTO) (int, *domain.DomainError)
+	GetAllByPostID(ctx context.Context, postID int) ([]domain.Comment, *domain.DomainError)
 }
 
 type CommentService struct {
@@ -26,10 +26,10 @@ func NewCommentService(commentRepository CommentRepository, db *gorm.DB) Comment
 	}
 }
 
-func (s CommentService) CreateComment(commentDTO dto.CommentDTO, creatorID, postID uint, ctx context.Context) (uint, *domain.DomainError) {
+func (s CommentService) CreateComment(commentDTO dto.CommentDTO, creatorID, postID int, ctx context.Context) (int, *domain.DomainError) {
 	commentDTO.CreatorID = creatorID
 	commentDTO.PostID = postID
-	commentID, domainErr := s.commentRepository.Create(commentDTO, s.db.WithContext(ctx))
+	commentID, domainErr := s.commentRepository.Create(ctx, commentDTO)
 	if domainErr != nil {
 		return 0, domainErr
 	}
@@ -37,16 +37,16 @@ func (s CommentService) CreateComment(commentDTO dto.CommentDTO, creatorID, post
 	return commentID, nil
 }
 
-func (s CommentService) DeleteComment(commentID, userID uint, ctx context.Context) *domain.DomainError {
-	if domainErr := s.commentRepository.Delete(commentID, userID, s.db.WithContext(ctx)); domainErr != nil {
+func (s CommentService) DeleteComment(commentID, userID int, ctx context.Context) *domain.DomainError {
+	if domainErr := s.commentRepository.Delete(ctx, commentID, userID); domainErr != nil {
 		return domainErr
 	}
 
 	return nil
 }
 
-func (s CommentService) GetAllCommentsByPostID(postID uint, ctx context.Context) ([]dto.CommentDTO, *domain.DomainError) {
-	comments, domainErr := s.commentRepository.GetAllByPostID(postID, s.db.WithContext(ctx))
+func (s CommentService) GetAllCommentsByPostID(postID int, ctx context.Context) ([]dto.CommentDTO, *domain.DomainError) {
+	comments, domainErr := s.commentRepository.GetAllByPostID(ctx, postID)
 	if domainErr != nil {
 		return nil, domainErr
 	}

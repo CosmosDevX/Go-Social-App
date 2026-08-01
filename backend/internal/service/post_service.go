@@ -14,7 +14,7 @@ import (
 )
 
 type CommentCounter interface {
-	CountCommentsOnPost(postID uint, db *gorm.DB) (int, *domain.DomainError)
+	CountCommentsOnPost(ctx context.Context, postID int) (int, *domain.DomainError)
 }
 
 type PostRepository interface {
@@ -178,7 +178,7 @@ func (s PostService) makePostDTOs(posts []domain.Post, likedPostsID []uint) []dt
 		if slices.Contains(likedPostsID, dtos[i].PostID) {
 			dtos[i].IsLiked = true
 		}
-		commentsCount, domainErr := s.commentRepository.CountCommentsOnPost(dtos[i].PostID, s.db) //TODO: remove - sql query in for
+		commentsCount, domainErr := s.commentRepository.CountCommentsOnPost(context.TODO(), int(dtos[i].PostID)) //TODO: remove - sql query in for
 		if domainErr == nil {
 			dtos[i].CommentsCount = commentsCount
 		}

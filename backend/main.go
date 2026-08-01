@@ -23,18 +23,19 @@ func main() {
 	config.Load()
 
 	//initialize clients
-	gormClient := infrastructure.GormClient{ConnectionString: config.DBConnectionString}
-	gormClient.Setup()
+	gormClient := infrastructure.GormClient{}
+	gormClient.Setup(config.DBConnectionString)
 	redisClient := infrastructure.NewRedisClient()
+	sqlxClient := infrastructure.NewSQLxClient(config.DBConnectionString)
 
 	//initialize managers
 	fileManager := utils.NewFileManager()
 
 	//initialize repositories
-	userRepository := repository.UserRepository{}
+	userRepository := repository.UserRepository{DB: sqlxClient.GetDB()}
 	postRepository := repository.PostRepository{}
 	postLikeRepository := repository.PostLikeRepository{}
-	commentRepository := repository.CommentRepository{}
+	commentRepository := repository.NewCommentRepository(sqlxClient.GetDB(), userRepository)
 	refreshTokenRepository := repository.NewRefreshTokenRepository(redisClient.GetClient())
 
 	//initialize services

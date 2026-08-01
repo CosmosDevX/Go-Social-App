@@ -9,7 +9,7 @@ import (
 )
 
 type UserService interface {
-	CreateUser(userDTO *dto.UserDTO, ctx context.Context) (uint, *domain.DomainError)
+	CreateUser(userDTO dto.UserDTO, ctx context.Context) (int, *domain.DomainError)
 	CurrentUserProfile(ctx context.Context) (string, *domain.DomainError)
 	GetUsernameByID(pathValue string, ctx context.Context) (string, *domain.DomainError)
 }
@@ -37,13 +37,13 @@ func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, domainErr := h.userService.CreateUser(&userDTO, r.Context())
+	id, domainErr := h.userService.CreateUser(userDTO, r.Context())
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	utils.WriteJSON(w, map[string]uint{"user_id": id})
+	utils.WriteJSON(w, map[string]int{"user_id": id})
 }
 
 func (h UserHandler) HandleCurrentUserProfile(w http.ResponseWriter, r *http.Request) {

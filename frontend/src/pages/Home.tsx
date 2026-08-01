@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getFeed, Post } from '../api/post'
-import { getErrorMessage } from '../api/client'
+import { getErrorMessage, isNotFoundError } from '../api/client'
 import { PostCard } from '../components/PostCard'
 import { Spinner } from '../components/Spinner'
 
@@ -24,7 +24,14 @@ export function Home() {
         if (!cancelled) setPosts(data)
       })
       .catch((err) => {
-        if (!cancelled) setError(getErrorMessage(err))
+        if (!cancelled) {
+          if (isNotFoundError(err)) {
+            setPosts([])
+            setError(null)
+          } else {
+            setError(getErrorMessage(err))
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)

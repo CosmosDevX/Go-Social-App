@@ -3,12 +3,11 @@ package domain
 import "myapp/internal/delivery/http/dto"
 
 type Comment struct {
-	ID          uint
-	CommentText string `gorm:"type: VARCHAR(250)"`
-	PostID      uint   `gorm:"index"`
-	Post        Post   `gorm:"foreignKey: PostID; references: ID"`
-	CreatorID   uint   `gorm:"index"`
-	Creator     User   `gorm:"foreignKey: CreatorID; references: ID"`
+	ID              int    `db:"id"`
+	CommentText     string `db:"text"`
+	PostID          int    `db:"post_id"`
+	CreatorID       int    `db:"creator_id"`
+	CreatorUsername string `db:"creator_username"`
 }
 
 func (c Comment) ToCommentDTO() dto.CommentDTO {
@@ -16,7 +15,16 @@ func (c Comment) ToCommentDTO() dto.CommentDTO {
 		CommentID:       c.ID,
 		PostID:          c.PostID,
 		CommentText:     c.CommentText,
-		CreatorUsername: c.Creator.Username,
+		CreatorUsername: c.CreatorUsername,
 		CreatorID:       c.CreatorID,
 	}
 }
+
+/*
+CREATE TABLE comments IF NOT EXISTS(
+	id SERIAL PRIMARY KEY,
+	text VARCHAR(250),
+	post_id INTEGER,
+	creator_id INTEGER
+);
+*/

@@ -7,73 +7,110 @@ import (
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/domain"
 
-	"gorm.io/gorm"
+	"github.com/jmoiron/sqlx"
 )
 
-type CommentRepository struct{}
+type UserGetter interface {
+	GetUsernameByIDs(ctx context.Context, ids []int) ([]string, *domain.DomainError)
+}
 
-func (r CommentRepository) Create(commentDTO dto.CommentDTO, db *gorm.DB) (uint, *domain.DomainError) {
-	comment := domain.Comment{
-		CommentText: commentDTO.CommentText,
-		PostID:      commentDTO.PostID,
-		CreatorID:   commentDTO.CreatorID,
+type CommentRepository struct {
+	db         *sqlx.DB
+	userGetter UserGetter
+}
+
+func NewCommentRepository(db *sqlx.DB, userGetter UserGetter) CommentRepository {
+	return CommentRepository{
+		db:         db,
+		userGetter: userGetter,
 	}
+}
 
-	result := db.Create(&comment)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+func (r CommentRepository) Create(ctx context.Context, commentDTO dto.CommentDTO) (int, *domain.DomainError) {
+	query := `INSERT INTO comments (text, post_id, creator_id) VALUES($1, $2, $3) RETURNING id`
+	var id int
+	err := r.db.QueryRowContext(ctx, query, commentDTO.CommentText, commentDTO.PostID, commentDTO.CreatorID).Scan(&id)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return 0, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return 0, &domain.DomainError{Code: constants.CreateError, Message: "error during comment creating"}
+		return 0, &domain.DomainError{Code: constants.CreateError, Message: "error during create comment"}
 	}
 
-	return comment.ID, nil
+	return id, nil
 }
 
-func (r CommentRepository) GetAllByPostID(postID uint, db *gorm.DB) ([]domain.Comment, *domain.DomainError) {
+func (r CommentRepository) GetAllByPostID(ctx context.Context, postID int) ([]domain.Comment, *domain.DomainError) {
+	query := `
+		SELECT c.id, text, post_id, creator_id, u.username AS creator_username FROM comments c
+		JOIN users u ON u.id = c.creator_id
+		WHERE c.post_id = $1
+	`
 	var comments []domain.Comment
-
-	result := db.Joins("Creator").Find(&comments, "post_id = ?", postID)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+	err := r.db.SelectContext(ctx, &comments, query, postID)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, &domain.DomainError{Code: constants.NotFound, Message: "comments not found"}
-		}
 
-		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during finding comments by post id"}
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during get comments by post_id"}
+	}
+
+	if len(comments) == 0 {
+		return nil, &domain.DomainError{Code: constants.NotFound, Message: "comments not found"}
+	}
+
+	creatorIDs := make([]int, len(comments))
+	for i := range creatorIDs {
+		creatorIDs[i] = comments[i].CreatorID
+	}
+
+	usernames, domainErr := r.userGetter.GetUsernameByIDs(ctx, creatorIDs)
+	if domainErr != nil {
+		return nil, domainErr
+	}
+
+	for i := range usernames {
+		comments[i].CreatorUsername = usernames[i]
 	}
 
 	return comments, nil
 }
 
-func (r CommentRepository) CountCommentsOnPost(postID uint, db *gorm.DB) (int, *domain.DomainError) {
-	var count int64
-	result := db.Model(&domain.Comment{}).Where("post_id = ?", postID).Count(&count)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+func (r CommentRepository) CountCommentsOnPost(ctx context.Context, postID int) (int, *domain.DomainError) {
+	query := `SELECT COUNT(*) FROM comments WHERE post_id = $1`
+	var count int
+	err := r.db.GetContext(ctx, &count, query, postID)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return 0, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
 		return 0, &domain.DomainError{Code: constants.FindError, Message: "error during count comments on post"}
 	}
 
-	return int(count), nil
+	return count, nil
 }
 
-func (r CommentRepository) Delete(commentID, userID uint, db *gorm.DB) *domain.DomainError {
-	result := db.Delete(&domain.Comment{}, "id = ? AND creator_id = ?", commentID, userID)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+func (r CommentRepository) Delete(ctx context.Context, commentID, userID int) *domain.DomainError {
+	query := `DELETE FROM comments WHERE id = $1 AND creator_id = $2`
+	sqlResult, err := r.db.ExecContext(ctx, query, commentID, userID)
+
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return &domain.DomainError{Code: constants.DeleteError, Message: "error during deleting the comment"}
+		return &domain.DomainError{Code: constants.DeleteError, Message: "error during delete comment"}
 	}
 
-	if result.RowsAffected == 0 {
+	rowsAffected, err := sqlResult.RowsAffected()
+	if err != nil {
+		return &domain.DomainError{Code: constants.DatabaseError, Message: "error during get affected rows"}
+	}
+
+	if rowsAffected == 0 {
 		return &domain.DomainError{Code: constants.NotFound, Message: "comment not deleted"}
 	}
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getUserPostsByUsername, getCurrentUserPosts, Post } from '../api/post'
-import { getErrorMessage } from '../api/client'
+import { getErrorMessage, isNotFoundError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { PostCard } from '../components/PostCard'
 import { Spinner } from '../components/Spinner'
@@ -36,8 +36,14 @@ export function Profile() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(getErrorMessage(err))
-          setPosts([])
+          // NotFound = у пользователя нет постов — это нормально
+          if (isNotFoundError(err)) {
+            setPosts([])
+            setError(null)
+          } else {
+            setError(getErrorMessage(err))
+            setPosts([])
+          }
         }
       } finally {
         if (!cancelled) setLoading(false)

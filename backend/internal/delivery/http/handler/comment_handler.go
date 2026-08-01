@@ -11,9 +11,9 @@ import (
 )
 
 type CommentService interface {
-	DeleteComment(commentID, userID uint, ctx context.Context) *domain.DomainError
-	CreateComment(commentDTO dto.CommentDTO, creatorID, postID uint, ctx context.Context) (uint, *domain.DomainError)
-	GetAllCommentsByPostID(postID uint, ctx context.Context) ([]dto.CommentDTO, *domain.DomainError)
+	DeleteComment(commentID, userID int, ctx context.Context) *domain.DomainError
+	CreateComment(commentDTO dto.CommentDTO, creatorID, postID int, ctx context.Context) (int, *domain.DomainError)
+	GetAllCommentsByPostID(postID int, ctx context.Context) ([]dto.CommentDTO, *domain.DomainError)
 }
 
 type CommentHandler struct {
@@ -51,13 +51,13 @@ func (h CommentHandler) HandleCreateComment(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	commentID, domainErr := h.commentService.CreateComment(commentDTO, creatorID, uint(postID), ctx)
+	commentID, domainErr := h.commentService.CreateComment(commentDTO, int(creatorID), int(postID), ctx)
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	utils.WriteJSON(w, map[string]uint{"comment_id": commentID})
+	utils.WriteJSON(w, map[string]int{"comment_id": commentID})
 }
 
 func (h CommentHandler) HandleGetAllCommentsOnPost(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +67,7 @@ func (h CommentHandler) HandleGetAllCommentsOnPost(w http.ResponseWriter, r *htt
 		return
 	}
 
-	dtos, domainErr := h.commentService.GetAllCommentsByPostID(uint(postID), r.Context())
+	dtos, domainErr := h.commentService.GetAllCommentsByPostID(int(postID), r.Context())
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
@@ -91,7 +91,7 @@ func (h CommentHandler) HandleDeleteComment(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if domainErr := h.commentService.DeleteComment(uint(commentID), userID, ctx); domainErr != nil {
+	if domainErr := h.commentService.DeleteComment(int(commentID), int(userID), ctx); domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
 	}

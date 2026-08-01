@@ -3,7 +3,6 @@ package infrastructure
 
 import (
 	"log"
-	"myapp/internal/domain"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -11,12 +10,11 @@ import (
 )
 
 type GormClient struct {
-	ConnectionString string
-	db               *gorm.DB
+	db *gorm.DB
 }
 
-func (c *GormClient) Setup() {
-	db, err := gorm.Open(postgres.Open(c.ConnectionString), &gorm.Config{
+func (c *GormClient) Setup(connStr string) {
+	db, err := gorm.Open(postgres.Open(connStr), &gorm.Config{
 		/*Logger: logger.Default.LogMode(logger.Silent),*/
 	})
 	if err != nil {
@@ -28,7 +26,7 @@ func (c *GormClient) Setup() {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	if err := db.AutoMigrate(&domain.User{}, &domain.Post{}, &domain.Comment{}, &domain.PostLike{}); err != nil {
+	if err := db.AutoMigrate(); err != nil {
 		log.Fatal(err)
 	}
 

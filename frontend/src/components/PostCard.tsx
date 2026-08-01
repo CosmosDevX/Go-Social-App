@@ -2,7 +2,7 @@ import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Post, likePost, dislikePost, deletePost } from '../api/post'
 import { Comment, createComment, getCommentsByPostId, deleteComment } from '../api/comment'
-import { getErrorMessage, getPostImageUrl } from '../api/client'
+import { getErrorMessage, getPostImageUrl, isNotFoundError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { ConfirmModal } from './ConfirmModal'
 
@@ -91,7 +91,14 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
       setCommentsCount(data.length)
       setCommentsLoaded(true)
     } catch (err) {
-      setCommentsError(getErrorMessage(err))
+      // NotFound = комментариев нет — это нормально
+      if (isNotFoundError(err)) {
+        setComments([])
+        setCommentsCount(0)
+        setCommentsLoaded(true)
+      } else {
+        setCommentsError(getErrorMessage(err))
+      }
     } finally {
       setCommentsLoading(false)
     }

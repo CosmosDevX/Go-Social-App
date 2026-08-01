@@ -7,6 +7,7 @@ const (
 	AccessTokenError  = "ACCESS_TOKEN_ERROR"
 	RefreshTokenError = "REFRESH_TOKEN_ERROR"
 
+	DatabaseError   = "DATABASE_ERROR"
 	NotFound        = "NOT_FOUND"
 	RequestTimeout  = "REQUEST_TIMEOUT"
 	SaveError       = "SAVE_ERROR"
