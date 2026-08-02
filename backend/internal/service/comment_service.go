@@ -4,8 +4,6 @@ import (
 	"context"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/domain"
-
-	"gorm.io/gorm"
 )
 
 type CommentRepository interface {
@@ -14,15 +12,19 @@ type CommentRepository interface {
 	GetAllByPostID(ctx context.Context, postID int) ([]domain.Comment, *domain.DomainError)
 }
 
-type CommentService struct {
-	commentRepository CommentRepository
-	db                *gorm.DB
+type UsernamesGetter interface {
+	GetUsernameByIDs(ctx context.Context, ids []int) ([]string, *domain.DomainError)
 }
 
-func NewCommentService(commentRepository CommentRepository, db *gorm.DB) CommentService {
+type CommentService struct {
+	commentRepository CommentRepository
+	usernamesGetter   UsernamesGetter
+}
+
+func NewCommentService(commentRepository CommentRepository, usernamesGetter UsernamesGetter) CommentService {
 	return CommentService{
 		commentRepository: commentRepository,
-		db:                db,
+		usernamesGetter:   usernamesGetter,
 	}
 }
 

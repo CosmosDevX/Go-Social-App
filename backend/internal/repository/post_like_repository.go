@@ -5,18 +5,22 @@ import (
 	"errors"
 	"myapp/internal/constants"
 	"myapp/internal/domain"
-
-	"github.com/jmoiron/sqlx"
 )
 
 type PostLikeRepository struct {
-	DB *sqlx.DB
+	db DBTX
+}
+
+func NewPostLikeRepository(db DBTX) PostLikeRepository {
+	return PostLikeRepository{
+		db: db,
+	}
 }
 
 func (r PostLikeRepository) GetLikedPostsID(ctx context.Context, userID int) ([]int, *domain.DomainError) {
 	query := `SELECT post_ID FROM post_likes WHERE liked_user_id = $1`
 	var postLikes []domain.PostLike
-	err := r.DB.SelectContext(ctx, &postLikes, query, userID)
+	err := r.db.SelectContext(ctx, &postLikes, query, userID)
 	if err != nil {
 		return nil, &domain.DomainError{
 			Code:    constants.FindError,
@@ -35,7 +39,7 @@ func (r PostLikeRepository) GetLikedPostsID(ctx context.Context, userID int) ([]
 func (r PostLikeRepository) LikeExists(ctx context.Context, userID, postID int) (bool, *domain.DomainError) {
 	query := `SELECT EXISTS(SELECT 1 FROM post_likes WHERE liked_user_id = $1 AND post_id = $2)`
 	var exists bool
-	err := r.DB.GetContext(ctx, &exists, query, userID, postID)
+	err := r.db.GetContext(ctx, &exists, query, userID, postID)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return false, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -49,7 +53,7 @@ func (r PostLikeRepository) LikeExists(ctx context.Context, userID, postID int) 
 
 func (r PostLikeRepository) CreateLike(ctx context.Context, likedUserID, postID int) *domain.DomainError {
 	query := `INSERT INTO post_likes(liked_user_id, post_id) VALUES($1, $2)`
-	_, err := r.DB.ExecContext(ctx, query, likedUserID, postID)
+	_, err := r.db.ExecContext(ctx, query, likedUserID, postID)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -63,7 +67,7 @@ func (r PostLikeRepository) CreateLike(ctx context.Context, likedUserID, postID 
 
 func (r PostLikeRepository) DeleteLike(ctx context.Context, likedUserID, postID int) *domain.DomainError {
 	query := `DELETE FROM post_likes WHERE liked_user_id = $1 AND post_id = $2`
-	sqlResult, err := r.DB.ExecContext(ctx, query, likedUserID, postID)
+	sqlResult, err := r.db.ExecContext(ctx, query, likedUserID, postID)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}

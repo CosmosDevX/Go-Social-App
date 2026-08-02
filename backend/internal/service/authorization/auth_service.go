@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type AuthResult struct {
@@ -31,15 +30,13 @@ type AuthService struct {
 	userGetter             UserGetter
 	refreshTokenRepository RefreshTokenRepository
 	jwtService             JWTServiceInterface
-	db                     *gorm.DB
 }
 
-func NewAuthService(userGetter UserGetter, refreshTokenRepo RefreshTokenRepository, jwtService JWTServiceInterface, db *gorm.DB) AuthService {
+func NewAuthService(userGetter UserGetter, refreshTokenRepo RefreshTokenRepository, jwtService JWTServiceInterface) AuthService {
 	return AuthService{
 		userGetter:             userGetter,
 		refreshTokenRepository: refreshTokenRepo,
 		jwtService:             jwtService,
-		db:                     db,
 	}
 }
 

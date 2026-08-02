@@ -13,13 +13,19 @@ import (
 )
 
 type UserRepository struct {
-	DB *sqlx.DB
+	db *sqlx.DB
+}
+
+func NewUserRepository(db *sqlx.DB) UserRepository {
+	return UserRepository{
+		db: db,
+	}
 }
 
 func (r UserRepository) GetUserByName(ctx context.Context, username string) (*domain.User, *domain.DomainError) {
 	query := `SELECT * FROM users WHERE username = $1`
 	var user domain.User
-	err := r.DB.GetContext(ctx, &user, query, username)
+	err := r.db.GetContext(ctx, &user, query, username)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -37,7 +43,7 @@ func (r UserRepository) GetUserByName(ctx context.Context, username string) (*do
 func (r UserRepository) CreateUser(ctx context.Context, userDTO dto.UserDTO) (int, *domain.DomainError) {
 	query := `INSERT INTO users (username, password) VALUES($1, $2) RETURNING id`
 	var id int
-	err := r.DB.QueryRowContext(ctx, query, userDTO.Username, userDTO.Password).Scan(&id)
+	err := r.db.QueryRowContext(ctx, query, userDTO.Username, userDTO.Password).Scan(&id)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return 0, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -52,7 +58,7 @@ func (r UserRepository) CreateUser(ctx context.Context, userDTO dto.UserDTO) (in
 func (r UserRepository) GetUsernameByID(ctx context.Context, userID int) (string, *domain.DomainError) {
 	query := `SELECT username FROM users WHERE id = $1`
 	var user domain.User
-	err := r.DB.GetContext(ctx, &user, query, userID)
+	err := r.db.GetContext(ctx, &user, query, userID)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return "", &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -77,10 +83,10 @@ func (r UserRepository) GetUsernameByIDs(ctx context.Context, ids []int) ([]stri
 		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during get usernames by ids"}
 	}
 
-	query = r.DB.Rebind(query)
+	query = r.db.Rebind(query)
 
 	var users []domain.User
-	err = r.DB.SelectContext(ctx, &users, query, args...)
+	err = r.db.SelectContext(ctx, &users, query, args...)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}

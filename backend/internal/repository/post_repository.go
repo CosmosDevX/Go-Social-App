@@ -8,25 +8,15 @@ import (
 	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/domain"
-
-	"github.com/jmoiron/sqlx"
-	"gorm.io/gorm"
 )
 
-type UserFieldsGetter interface {
-	GetUsernameByID(ctx context.Context, userID int) (string, *domain.DomainError)
-	GetUserByName(ctx context.Context, username string) (*domain.User, *domain.DomainError)
-}
-
 type PostRepository struct {
-	db               *sqlx.DB
-	userFieldsGetter UserFieldsGetter
+	db DBTX
 }
 
-func NewPostRepository(db *sqlx.DB, userFieldsGetter UserFieldsGetter) PostRepository {
+func NewPostRepository(db DBTX) PostRepository {
 	return PostRepository{
-		db:               db,
-		userFieldsGetter: userFieldsGetter,
+		db: db,
 	}
 }
 
@@ -64,7 +54,10 @@ func (r PostRepository) GetByID(ctx context.Context, postID int) (*domain.Post, 
 }
 
 func (r PostRepository) GetAllByID(ctx context.Context, userID int) ([]domain.Post, *domain.DomainError) {
-	query := `SELECT * FROM posts WHERE creator_id = $1`
+	query := `SELECT p.*, u.username AS creator_username FROM posts p
+			LEFT JOIN users u ON p.creator_id = u.id	 
+			WHERE creator_id = $1
+		 `
 	var posts []domain.Post
 	err := r.db.SelectContext(ctx, &posts, query, userID)
 	if err != nil {
@@ -79,25 +72,10 @@ func (r PostRepository) GetAllByID(ctx context.Context, userID int) ([]domain.Po
 		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during fing posts by user id"}
 	}
 
-	username, domainErr := r.userFieldsGetter.GetUsernameByID(ctx, userID)
-	if domainErr != nil {
-		return nil, domainErr
-	}
-
-	for i := range posts {
-		posts[i].CreatorUsername = username
-	}
-
 	return posts, nil
 }
 
-func (r PostRepository) GetAllByUsername(ctx context.Context, username string) ([]domain.Post, *domain.DomainError) {
-	user, domainErr := r.userFieldsGetter.GetUserByName(ctx, username)
-	if domainErr != nil {
-		return nil, domainErr
-	}
-	userID := user.ID
-
+func (r PostRepository) GetAllByUsername(ctx context.Context, username string, userID int) ([]domain.Post, *domain.DomainError) {
 	posts, domainErr := r.GetAllByID(ctx, userID)
 	if domainErr != nil {
 		return nil, domainErr
@@ -159,20 +137,19 @@ func (r PostRepository) DeletePost(ctx context.Context, postID, userID int) *dom
 	return nil
 }
 
-func (r PostRepository) GetPostFeed(db *gorm.DB) ([]domain.Post, *domain.DomainError) {
+func (r PostRepository) GetPostFeed(ctx context.Context) ([]domain.Post, *domain.DomainError) {
+	query := `SELECT p.*, u.username AS creator_username FROM posts p
+    	LEFT JOIN users u ON p.creator_id = u.id
+    	ORDER BY RANDOM() LIMIT 30`
 	var posts []domain.Post
-	result := db. //TODO: remove and make post feed pagination
-			Preload("Creator").
-			Order("RANDOM()").
-			Limit(30).
-			Find(&posts)
-
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+	err := r.db.SelectContext(ctx, &posts, query)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during getting post feed"}
+		log.Println(err)
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during get post feed"}
 	}
 
 	return posts, nil

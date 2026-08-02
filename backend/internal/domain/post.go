@@ -11,7 +11,7 @@ type Post struct {
 	CreatorID       int    `db:"creator_id"`
 	Likes           int    `db:"likes"`
 	ImageName       string `db:"image_name"`
-	CreatorUsername string `db:"-"`
+	CreatorUsername string `db:"creator_username"`
 }
 
 func (p Post) ToPostDTO() dto.PostDTO {

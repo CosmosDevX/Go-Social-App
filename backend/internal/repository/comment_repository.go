@@ -10,19 +10,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type UserGetter interface {
-	GetUsernameByIDs(ctx context.Context, ids []int) ([]string, *domain.DomainError)
-}
-
 type CommentRepository struct {
-	db         *sqlx.DB
-	userGetter UserGetter
+	db *sqlx.DB
 }
 
-func NewCommentRepository(db *sqlx.DB, userGetter UserGetter) CommentRepository {
+func NewCommentRepository(db *sqlx.DB) CommentRepository {
 	return CommentRepository{
-		db:         db,
-		userGetter: userGetter,
+		db: db,
 	}
 }
 
@@ -59,20 +53,6 @@ func (r CommentRepository) GetAllByPostID(ctx context.Context, postID int) ([]do
 
 	if len(comments) == 0 {
 		return nil, &domain.DomainError{Code: constants.NotFound, Message: "comments not found"}
-	}
-
-	creatorIDs := make([]int, len(comments))
-	for i := range creatorIDs {
-		creatorIDs[i] = comments[i].CreatorID
-	}
-
-	usernames, domainErr := r.userGetter.GetUsernameByIDs(ctx, creatorIDs)
-	if domainErr != nil {
-		return nil, domainErr
-	}
-
-	for i := range usernames {
-		comments[i].CreatorUsername = usernames[i]
 	}
 
 	return comments, nil

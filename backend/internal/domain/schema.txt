@@ -4,7 +4,7 @@ CREATE TABLE posts(
 	name VARCHAR(100),
 	description VARCHAR(900),
 	creator_id INTEGER,
-	likes INTEGER,
+	likes INTEGER DEFAULT 0,
 	image_name VARCHAR(300)
 );
 CREATE TABLE post_likes (

@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 type UserRepository interface {
@@ -21,13 +20,11 @@ type UserRepository interface {
 
 type UserService struct {
 	userRepository UserRepository
-	db             *gorm.DB
 }
 
-func NewUserService(userRepository UserRepository, db *gorm.DB) UserService {
+func NewUserService(userRepository UserRepository) UserService {
 	return UserService{
 		userRepository: userRepository,
-		db:             db,
 	}
 }
 
