@@ -18,17 +18,17 @@ type CommentCounter interface {
 }
 
 type PostRepository interface {
-	Create(postDTO dto.PostDTO, db *gorm.DB) (uint, *domain.DomainError)
-	GetByID(postID uint, db *gorm.DB) (*domain.Post, *domain.DomainError)
-	GetAllByID(userID uint, db *gorm.DB) ([]domain.Post, *domain.DomainError)
-	GetAllByUsername(username string, db *gorm.DB) ([]domain.Post, *domain.DomainError)
-	DeletePost(postID, userID uint, db *gorm.DB) *domain.DomainError
+	Create(ctx context.Context, postDTO dto.PostDTO) (int, *domain.DomainError)
+	GetByID(ctx context.Context, postID int) (*domain.Post, *domain.DomainError)
+	GetAllByID(ctx context.Context, userID int) ([]domain.Post, *domain.DomainError)
+	GetAllByUsername(ctx context.Context, username string) ([]domain.Post, *domain.DomainError)
+	DeletePost(ctx context.Context, postID, userID int) *domain.DomainError
 	GetPostFeed(db *gorm.DB) ([]domain.Post, *domain.DomainError)
-	GetImageName(postID uint, db *gorm.DB) (string, *domain.DomainError)
+	GetImageName(ctx context.Context, postID int) (string, *domain.DomainError)
 }
 
 type PostLikeGetter interface {
-	GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *domain.DomainError)
+	GetLikedPostsID(ctx context.Context, userID int) ([]int, *domain.DomainError)
 }
 
 type PostService struct {
@@ -51,7 +51,7 @@ func NewPostService(postRepository PostRepository,
 	}
 }
 
-func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID uint, file multipart.File, header *multipart.FileHeader, ctx context.Context) (uint, *domain.DomainError) {
+func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID int, file multipart.File, header *multipart.FileHeader, ctx context.Context) (int, *domain.DomainError) {
 	tx := s.db.Begin().WithContext(ctx)
 	if tx.Error != nil {
 		return 0, &domain.DomainError{Code: constants.TransactionError, Message: "error during start transaction"}
@@ -62,14 +62,15 @@ func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID uint, file multip
 		return 0, &domain.DomainError{Code: constants.SaveError, Message: err.Error()}
 	}
 
-	postDTO.CreatorID = creatorID
+	postDTO.CreatorID = int(creatorID)
 	postDTO.ImageName = filename
-	postID, domainErr := s.postRepository.Create(postDTO, tx)
+	postID, domainErr := s.postRepository.Create(ctx, postDTO)
 	if domainErr != nil {
 		if err := tx.Rollback().Error; err != nil {
 			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
 
+		log.Println("file delete and transaction rollback")
 		if err := s.fileManager.DeleteFile("/uploads", filename); err != nil {
 			log.Println(err.Error())
 		}
@@ -84,13 +85,13 @@ func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID uint, file multip
 	return postID, nil
 }
 
-func (s PostService) DeletePost(postID, userID uint, ctx context.Context) *domain.DomainError {
+func (s PostService) DeletePost(postID, userID int, ctx context.Context) *domain.DomainError {
 	tx := s.db.Begin().WithContext(ctx)
 	if tx.Error != nil {
 		return &domain.DomainError{Code: constants.TransactionError, Message: "error during start transaction"}
 	}
 
-	imageName, domainErr := s.postRepository.GetImageName(postID, tx)
+	imageName, domainErr := s.postRepository.GetImageName(ctx, postID)
 	if domainErr != nil {
 		if err := tx.Rollback().Error; err != nil {
 			return &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
@@ -98,7 +99,7 @@ func (s PostService) DeletePost(postID, userID uint, ctx context.Context) *domai
 		return domainErr
 	}
 
-	if domainErr := s.postRepository.DeletePost(postID, userID, tx); domainErr != nil {
+	if domainErr := s.postRepository.DeletePost(ctx, postID, userID); domainErr != nil {
 		if err := tx.Rollback().Error; err != nil {
 			return &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
@@ -119,8 +120,8 @@ func (s PostService) DeletePost(postID, userID uint, ctx context.Context) *domai
 	return nil
 }
 
-func (s PostService) GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO, *domain.DomainError) {
-	post, err := s.postRepository.GetByID(postID, s.db.WithContext(ctx))
+func (s PostService) GetPostByID(postID int, ctx context.Context) (*dto.PostDTO, *domain.DomainError) {
+	post, err := s.postRepository.GetByID(ctx, postID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,13 +130,13 @@ func (s PostService) GetPostByID(postID uint, ctx context.Context) (*dto.PostDTO
 	return &dto, nil
 }
 
-func (s PostService) GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
-	posts, err := s.postRepository.GetAllByID(userID, s.db.WithContext(ctx))
+func (s PostService) GetCurrentUserPosts(userID int, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
+	posts, err := s.postRepository.GetAllByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(userID, s.db.WithContext(ctx))
+	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(ctx, userID)
 	if domainErr != nil {
 		return nil, domainErr
 	}
@@ -143,13 +144,13 @@ func (s PostService) GetCurrentUserPosts(userID uint, ctx context.Context) ([]dt
 	return s.makePostDTOs(posts, likedPostsID), nil
 }
 
-func (s PostService) GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
-	posts, err := s.postRepository.GetAllByUsername(username, s.db.WithContext(ctx))
+func (s PostService) GetUserPostsByUsername(username string, currentUserID int, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
+	posts, err := s.postRepository.GetAllByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
 
-	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(currentUserID, s.db.WithContext(ctx))
+	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(ctx, currentUserID)
 	if domainErr != nil {
 		return nil, domainErr
 	}
@@ -163,7 +164,7 @@ func (s PostService) GetPostFeed(currentUserID uint, ctx context.Context) ([]dto
 		return nil, domainErr
 	}
 
-	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(currentUserID, s.db.WithContext(ctx))
+	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(ctx, int(currentUserID))
 	if domainErr != nil {
 		return nil, domainErr
 	}
@@ -171,7 +172,7 @@ func (s PostService) GetPostFeed(currentUserID uint, ctx context.Context) ([]dto
 	return s.makePostDTOs(posts, likedPostsID), nil
 }
 
-func (s PostService) makePostDTOs(posts []domain.Post, likedPostsID []uint) []dto.PostDTO {
+func (s PostService) makePostDTOs(posts []domain.Post, likedPostsID []int) []dto.PostDTO {
 	dtos := make([]dto.PostDTO, len(posts))
 	for i, post := range posts {
 		dtos[i] = post.ToPostDTO()

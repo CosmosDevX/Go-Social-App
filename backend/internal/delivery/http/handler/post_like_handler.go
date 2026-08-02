@@ -10,8 +10,8 @@ import (
 )
 
 type PostLikeService interface {
-	LikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError)
-	DislikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError)
+	LikePost(postID, userID int, ctx context.Context) (int, *domain.DomainError)
+	DislikePost(postID, userID int, ctx context.Context) (int, *domain.DomainError)
 }
 
 type PostLikeHandler struct {
@@ -39,7 +39,7 @@ func (h PostLikeHandler) HandleLikePost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	likes, domainErr := h.postLikeService.LikePost(uint(postID), userID, ctx)
+	likes, domainErr := h.postLikeService.LikePost(int(postID), int(userID), ctx)
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
@@ -63,7 +63,7 @@ func (h PostLikeHandler) HandleDislikePost(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	likes, domainErr := h.postLikeService.DislikePost(uint(postID), userID, ctx)
+	likes, domainErr := h.postLikeService.DislikePost(int(postID), int(userID), ctx)
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return

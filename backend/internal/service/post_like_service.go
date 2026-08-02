@@ -9,14 +9,14 @@ import (
 )
 
 type LikeUpdater interface {
-	IncrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError)
-	DecrementLikes(postID uint, db *gorm.DB) (int, *domain.DomainError)
+	IncrementLikes(ctx context.Context, postID int) (int, *domain.DomainError)
+	DecrementLikes(ctx context.Context, postID int) (int, *domain.DomainError)
 }
 
 type PostLikeRepository interface {
-	CreateLike(likedUserID uint, postID uint, db *gorm.DB) *domain.DomainError
-	DeleteLike(likedUserID, postID uint, db *gorm.DB) *domain.DomainError
-	LikeExists(userID, postID uint, db *gorm.DB) (bool, *domain.DomainError)
+	CreateLike(ctx context.Context, likedUserID, postID int) *domain.DomainError
+	DeleteLike(ctx context.Context, likedUserID, postID int) *domain.DomainError
+	LikeExists(ctx context.Context, userID, postID int) (bool, *domain.DomainError)
 }
 
 type PostLikeService struct {
@@ -33,10 +33,10 @@ func NewPostLikeService(postRepository LikeUpdater, postLikeRepository PostLikeR
 	}
 }
 
-func (s PostLikeService) LikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError) {
+func (s PostLikeService) LikePost(postID, userID int, ctx context.Context) (int, *domain.DomainError) {
 	dbWithCtx := s.db.WithContext(ctx)
 
-	result, domainErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
+	result, domainErr := s.postLikeRepository.LikeExists(ctx, userID, postID)
 	if domainErr != nil {
 		return 0, domainErr
 	}
@@ -49,7 +49,7 @@ func (s PostLikeService) LikePost(postID, userID uint, ctx context.Context) (int
 		return 0, &domain.DomainError{Code: constants.TransactionError, Message: "error starting transaction"}
 	}
 
-	likes, domainErr := s.postRepository.IncrementLikes(postID, tx)
+	likes, domainErr := s.postRepository.IncrementLikes(ctx, postID)
 	if domainErr != nil {
 		if result := tx.Rollback(); result.Error != nil {
 			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
@@ -57,7 +57,7 @@ func (s PostLikeService) LikePost(postID, userID uint, ctx context.Context) (int
 		return 0, domainErr
 	}
 
-	if domainErr := s.postLikeRepository.CreateLike(userID, postID, tx); domainErr != nil {
+	if domainErr := s.postLikeRepository.CreateLike(ctx, userID, postID); domainErr != nil {
 		if result := tx.Rollback(); result.Error != nil {
 			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}
@@ -71,10 +71,10 @@ func (s PostLikeService) LikePost(postID, userID uint, ctx context.Context) (int
 	return likes, nil
 }
 
-func (s PostLikeService) DislikePost(postID, userID uint, ctx context.Context) (int, *domain.DomainError) {
+func (s PostLikeService) DislikePost(postID, userID int, ctx context.Context) (int, *domain.DomainError) {
 	dbWithCtx := s.db.WithContext(ctx)
 
-	result, domainErr := s.postLikeRepository.LikeExists(userID, postID, dbWithCtx)
+	result, domainErr := s.postLikeRepository.LikeExists(ctx, userID, postID)
 	if domainErr != nil {
 		return 0, domainErr
 	}
@@ -87,7 +87,7 @@ func (s PostLikeService) DislikePost(postID, userID uint, ctx context.Context) (
 		return 0, &domain.DomainError{Code: constants.TransactionError, Message: "error starting transaction"}
 	}
 
-	likes, domainErr := s.postRepository.DecrementLikes(postID, tx)
+	likes, domainErr := s.postRepository.DecrementLikes(ctx, postID)
 	if domainErr != nil {
 		if result := tx.Rollback(); result.Error != nil {
 			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
@@ -95,7 +95,7 @@ func (s PostLikeService) DislikePost(postID, userID uint, ctx context.Context) (
 		return 0, domainErr
 	}
 
-	if domainErr := s.postLikeRepository.DeleteLike(userID, postID, tx); domainErr != nil {
+	if domainErr := s.postLikeRepository.DeleteLike(ctx, userID, postID); domainErr != nil {
 		if result := tx.Rollback(); result.Error != nil {
 			return 0, &domain.DomainError{Code: constants.TransactionError, Message: "transaction rollback failed"}
 		}

@@ -13,10 +13,10 @@ import (
 )
 
 type PostService interface {
-	CreatePost(postDTO dto.PostDTO, creatorID uint, file multipart.File, header *multipart.FileHeader, ctx context.Context) (uint, *domain.DomainError)
-	GetCurrentUserPosts(userID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
-	GetUserPostsByUsername(username string, currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
-	DeletePost(postID, userID uint, ctx context.Context) *domain.DomainError
+	CreatePost(postDTO dto.PostDTO, creatorID int, file multipart.File, header *multipart.FileHeader, ctx context.Context) (int, *domain.DomainError)
+	GetCurrentUserPosts(userID int, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
+	GetUserPostsByUsername(username string, currentUserID int, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
+	DeletePost(postID, userID int, ctx context.Context) *domain.DomainError
 	GetPostFeed(currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError)
 }
 
@@ -72,13 +72,13 @@ func (h PostHandler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postID, domainErr := h.postService.CreatePost(postDTO, creatorID, file, header, ctx)
+	postID, domainErr := h.postService.CreatePost(postDTO, int(creatorID), file, header, ctx)
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	utils.WriteJSON(w, map[string]uint{"post_id": postID})
+	utils.WriteJSON(w, map[string]int{"post_id": postID})
 }
 
 func (h PostHandler) HandleGetCurrentUserPosts(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +90,7 @@ func (h PostHandler) HandleGetCurrentUserPosts(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	dtos, domainErr := h.postService.GetCurrentUserPosts(parsedUserID, ctx)
+	dtos, domainErr := h.postService.GetCurrentUserPosts(int(parsedUserID), ctx)
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
@@ -108,7 +108,7 @@ func (h PostHandler) HandleGetUserPostsByUsername(w http.ResponseWriter, r *http
 		return
 	}
 
-	dtos, domainErr := h.postService.GetUserPostsByUsername(r.PathValue("username"), parsedUserID, ctx)
+	dtos, domainErr := h.postService.GetUserPostsByUsername(r.PathValue("username"), int(parsedUserID), ctx)
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
@@ -150,7 +150,7 @@ func (h PostHandler) HandleDeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if domainErr := h.postService.DeletePost(uint(postID), userID, ctx); domainErr != nil {
+	if domainErr := h.postService.DeletePost(int(postID), int(userID), ctx); domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
 	}

@@ -27,14 +27,15 @@ func main() {
 	gormClient.Setup(config.DBConnectionString)
 	redisClient := infrastructure.NewRedisClient()
 	sqlxClient := infrastructure.NewSQLxClient(config.DBConnectionString)
+	// base migration sqlxClient.CreateTables("CREATE TABLE posts(id SERIAL PRIMARY KEY,name VARCHAR(100),description VARCHAR(900),creator_id INTEGER,likes INTEGER DEFAULT 0,image_name VARCHAR(300)); CREATE TABLE post_likes(id SERIAL PRIMARY KEY,liked_user_id INTEGER,post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE); CREATE TABLE comments(id SERIAL PRIMARY KEY,text VARCHAR(250),post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,creator_id INTEGER); CREATE TABLE users(id SERIAL PRIMARY KEY,username VARCHAR(60) UNIQUE NOT NULL,password VARCHAR(100) NOT NULL);")
 
 	//initialize managers
 	fileManager := utils.NewFileManager()
 
 	//initialize repositories
 	userRepository := repository.UserRepository{DB: sqlxClient.GetDB()}
-	postRepository := repository.PostRepository{}
-	postLikeRepository := repository.PostLikeRepository{}
+	postRepository := repository.NewPostRepository(sqlxClient.GetDB(), userRepository)
+	postLikeRepository := repository.PostLikeRepository{DB: sqlxClient.GetDB()}
 	commentRepository := repository.NewCommentRepository(sqlxClient.GetDB(), userRepository)
 	refreshTokenRepository := repository.NewRefreshTokenRepository(redisClient.GetClient())
 

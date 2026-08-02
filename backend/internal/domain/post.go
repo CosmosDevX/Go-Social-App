@@ -5,16 +5,13 @@ import (
 )
 
 type Post struct {
-	ID              uint
-	PostName        string `gorm:"type: VARCHAR(100)"`
-	PostDescription string `gorm:"type: VARCHAR(900)"`
-	CreatorID       uint   `gorm:"index"`
-	Creator         User   `gorm:"foreignKey: CreatorID; references: ID"`
-	Likes           int    `gorm:"type: INTEGER"`
-	ImageName       string `gorm:"type: VARCHAR(300)"`
-
-	PostLikes []PostLike `gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE;"`
-	Comments  []Comment  `gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE;"`
+	ID              int    `db:"id"`
+	PostName        string `db:"name"`
+	PostDescription string `db:"description"`
+	CreatorID       int    `db:"creator_id"`
+	Likes           int    `db:"likes"`
+	ImageName       string `db:"image_name"`
+	CreatorUsername string `db:"-"`
 }
 
 func (p Post) ToPostDTO() dto.PostDTO {
@@ -24,7 +21,18 @@ func (p Post) ToPostDTO() dto.PostDTO {
 		PostDescription: p.PostDescription,
 		CreatorID:       p.CreatorID,
 		Likes:           p.Likes,
-		CreatorName:     p.Creator.Username,
+		CreatorName:     p.CreatorUsername,
 		ImageName:       p.ImageName,
 	}
 }
+
+/*
+CREATE TABLE posts(
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(100),
+	description VARCHAR(900),
+	creator_id INTEGER,
+	likes INTEGER DEFAULT 0,
+	image_name VARCHAR(300)
+);
+*/

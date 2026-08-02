@@ -3,10 +3,10 @@ package dto
 import "errors"
 
 type PostDTO struct {
-	PostID          uint   `json:"post_id"`
+	PostID          int    `json:"post_id"`
 	PostName        string `json:"post_name"`
 	PostDescription string `json:"post_description"`
-	CreatorID       uint   `json:"creator_id"`
+	CreatorID       int    `json:"creator_id"`
 	CreatorName     string `json:"creator_name"`
 	Likes           int    `json:"likes"`
 	IsLiked         bool   `json:"is_liked"`

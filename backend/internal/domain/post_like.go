@@ -1,8 +1,15 @@
 package domain
 
 type PostLike struct {
-	ID          uint
-	LikedUserID uint `gorm:"index"`
-	PostID      uint `gorm:"index"`
-	Post        Post `gorm:"foreignKey: PostID; references: ID"`
+	ID          int `db:"id"`
+	LikedUserID int `db:"liked_user_id"`
+	PostID      int `db:"post_id"`
 }
+
+/*
+CREATE TABLE post_likes (
+	id SERIAL PRIMARY KEY,
+	liked_user_id INTEGER,
+	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE
+);
+*/

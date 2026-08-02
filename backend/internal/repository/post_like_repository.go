@@ -6,75 +6,79 @@ import (
 	"myapp/internal/constants"
 	"myapp/internal/domain"
 
-	"gorm.io/gorm"
+	"github.com/jmoiron/sqlx"
 )
 
-type PostLikeRepository struct{}
+type PostLikeRepository struct {
+	DB *sqlx.DB
+}
 
-func (r PostLikeRepository) GetLikedPostsID(userID uint, db *gorm.DB) ([]uint, *domain.DomainError) {
-	var postIDs []uint
-
-	result := db.Model(&domain.PostLike{}).
-		Where("liked_user_id = ?", userID).
-		Pluck("post_id", &postIDs)
-
-	if result.Error != nil {
+func (r PostLikeRepository) GetLikedPostsID(ctx context.Context, userID int) ([]int, *domain.DomainError) {
+	query := `SELECT post_ID FROM post_likes WHERE liked_user_id = $1`
+	var postLikes []domain.PostLike
+	err := r.DB.SelectContext(ctx, &postLikes, query, userID)
+	if err != nil {
 		return nil, &domain.DomainError{
 			Code:    constants.FindError,
 			Message: "error during finding liked post ids",
 		}
 	}
 
+	postIDs := make([]int, len(postLikes))
+	for i := range postLikes {
+		postIDs[i] = postLikes[i].PostID
+	}
+
 	return postIDs, nil
 }
 
-func (r PostLikeRepository) LikeExists(userID, postID uint, db *gorm.DB) (bool, *domain.DomainError) {
-	var postLike domain.PostLike
-	result := db.Model(&domain.PostLike{}).Where("liked_user_id = ? AND post_id = ?", userID, postID).First(&postLike)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+func (r PostLikeRepository) LikeExists(ctx context.Context, userID, postID int) (bool, *domain.DomainError) {
+	query := `SELECT EXISTS(SELECT 1 FROM post_likes WHERE liked_user_id = $1 AND post_id = $2)`
+	var exists bool
+	err := r.DB.GetContext(ctx, &exists, query, userID, postID)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return false, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
 
-		return false, &domain.DomainError{Code: constants.FindError, Message: "error during finding like on post"}
+		return false, &domain.DomainError{Code: constants.FindError, Message: "error during find like on post"}
 	}
 
-	return true, nil
+	return exists, nil
 }
 
-func (r PostLikeRepository) CreateLike(likedUserID uint, postID uint, db *gorm.DB) *domain.DomainError {
-	postLike := domain.PostLike{
-		LikedUserID: likedUserID,
-		PostID:      postID,
-	}
-
-	result := db.Create(&postLike)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+func (r PostLikeRepository) CreateLike(ctx context.Context, likedUserID, postID int) *domain.DomainError {
+	query := `INSERT INTO post_likes(liked_user_id, post_id) VALUES($1, $2)`
+	_, err := r.DB.ExecContext(ctx, query, likedUserID, postID)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return &domain.DomainError{Code: constants.CreateError, Message: "error during post creating"}
+		return &domain.DomainError{Code: constants.CreateError, Message: "error during create post like"}
 	}
 
 	return nil
 }
 
-func (r PostLikeRepository) DeleteLike(likedUserID, postID uint, db *gorm.DB) *domain.DomainError {
-	result := db.Delete(&domain.PostLike{}, "liked_user_id = ? AND post_id = ?", likedUserID, postID)
-	if result.Error != nil {
-		if errors.Is(result.Error, context.DeadlineExceeded) {
+func (r PostLikeRepository) DeleteLike(ctx context.Context, likedUserID, postID int) *domain.DomainError {
+	query := `DELETE FROM post_likes WHERE liked_user_id = $1 AND post_id = $2`
+	sqlResult, err := r.DB.ExecContext(ctx, query, likedUserID, postID)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
 
-		return &domain.DomainError{Code: constants.DeleteError, Message: "error during post like deleting"}
+		return &domain.DomainError{Code: constants.DeleteError, Message: "error during delete post like"}
 	}
 
-	if result.RowsAffected == 0 {
-		return &domain.DomainError{Code: constants.NotFound, Message: "this user like on post not found"}
+	rowsAffected, err := sqlResult.RowsAffected()
+	if err != nil {
+		return &domain.DomainError{Code: constants.DatabaseError, Message: "error during get affected rows"}
+	}
+
+	if rowsAffected == 0 {
+		return &domain.DomainError{Code: constants.NotFound, Message: "post like not deleted"}
 	}
 
 	return nil
