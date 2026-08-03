@@ -13,6 +13,7 @@ require (
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/go-redis/redis_rate/v10 v10.0.1 // indirect
 	github.com/stretchr/testify v1.8.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 )

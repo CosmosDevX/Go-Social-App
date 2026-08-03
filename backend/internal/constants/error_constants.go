@@ -22,4 +22,5 @@ const (
 	ValidationError    = "VALIDATION_ERROR"
 	DeserializingError = "DESERIALIZING_ERROR"
 	FileError          = "FILE_ERROR"
+	TooManyRequests    = "TOO_MANY_REQUESTS"
 )

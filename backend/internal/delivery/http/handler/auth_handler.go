@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
@@ -10,6 +11,8 @@ import (
 	"myapp/internal/service/authorization"
 	"myapp/internal/utils"
 	"net/http"
+
+	"github.com/go-redis/redis_rate/v10"
 )
 
 type AuthService interface {
@@ -20,16 +23,31 @@ type AuthService interface {
 
 type AuthHandler struct {
 	authService AuthService
+	rateLimiter redis_rate.Limiter
 }
 
-func NewAuthHandler(authService AuthService) AuthHandler {
+func NewAuthHandler(authService AuthService, rateLimiter redis_rate.Limiter) AuthHandler {
 	return AuthHandler{
 		authService: authService,
+		rateLimiter: rateLimiter,
 	}
 }
 
 func (h AuthHandler) HandleAuth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	ip := r.RemoteAddr
+
+	res, err := h.rateLimiter.Allow(ctx, "auth:"+ip, redis_rate.PerMinute(5))
+	if err != nil {
+		WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests"))
+		return
+	}
+
+	if res.Allowed == 0 {
+		w.Header().Set("Retry-After", fmt.Sprintf("%.0f", res.RetryAfter.Seconds()))
+		WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests. Try again later"))
+		return
+	}
 
 	var userDTO dto.UserDTO
 	if err := utils.Deserialize(r.Body, &userDTO); err != nil {
