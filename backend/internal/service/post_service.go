@@ -56,14 +56,14 @@ func NewPostService(unitOfWork repository.UnitOfWork, postRepository PostReposit
 	}
 }
 
-func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID int, file multipart.File, header *multipart.FileHeader, ctx context.Context) (int, *domain.DomainError) {
+func (s PostService) CreatePost(ctx context.Context, postDTO dto.PostDTO, creatorID int, file multipart.File, header *multipart.FileHeader) (int, *domain.DomainError) {
 	value, domainErr := s.unitOfWork.Do(ctx, func(ctx context.Context, repos repository.Repositories) (any, *domain.DomainError) {
 		filename, err := s.fileManager.SaveFile(file, header, "uploads")
 		if err != nil {
 			return 0, &domain.DomainError{Code: constants.SaveError, Message: err.Error()}
 		}
 
-		postDTO.CreatorID = int(creatorID)
+		postDTO.CreatorID = creatorID
 		postDTO.ImageName = filename
 		postID, domainErr := s.postRepository.Create(ctx, postDTO)
 		if domainErr != nil {
@@ -85,7 +85,7 @@ func (s PostService) CreatePost(postDTO dto.PostDTO, creatorID int, file multipa
 	return postID, nil
 }
 
-func (s PostService) DeletePost(postID, userID int, ctx context.Context) *domain.DomainError {
+func (s PostService) DeletePost(ctx context.Context, postID, userID int) *domain.DomainError {
 	_, domainErr := s.unitOfWork.Do(ctx, func(ctx context.Context, repos repository.Repositories) (any, *domain.DomainError) {
 		imageName, domainErr := s.postRepository.GetImageName(ctx, postID)
 		if domainErr != nil {
@@ -110,7 +110,7 @@ func (s PostService) DeletePost(postID, userID int, ctx context.Context) *domain
 	return nil
 }
 
-func (s PostService) GetPostByID(postID int, ctx context.Context) (*dto.PostDTO, *domain.DomainError) {
+func (s PostService) GetPostByID(ctx context.Context, postID int) (*dto.PostDTO, *domain.DomainError) {
 	post, err := s.postRepository.GetByID(ctx, postID)
 	if err != nil {
 		return nil, err
@@ -120,7 +120,7 @@ func (s PostService) GetPostByID(postID int, ctx context.Context) (*dto.PostDTO,
 	return &dto, nil
 }
 
-func (s PostService) GetCurrentUserPosts(userID int, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
+func (s PostService) GetCurrentUserPosts(ctx context.Context, userID int) ([]dto.PostDTO, *domain.DomainError) {
 	posts, domainErr := s.postRepository.GetAllByID(ctx, userID)
 	if domainErr != nil {
 		return nil, domainErr
@@ -134,7 +134,7 @@ func (s PostService) GetCurrentUserPosts(userID int, ctx context.Context) ([]dto
 	return s.makePostDTOs(posts, likedPostsID), nil
 }
 
-func (s PostService) GetUserPostsByUsername(username string, currentUserID int, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
+func (s PostService) GetUserPostsByUsername(ctx context.Context, username string, currentUserID int) ([]dto.PostDTO, *domain.DomainError) {
 	posts, err := s.postRepository.GetAllByUsername(ctx, username, currentUserID)
 	if err != nil {
 		return nil, err
@@ -148,13 +148,13 @@ func (s PostService) GetUserPostsByUsername(username string, currentUserID int, 
 	return s.makePostDTOs(posts, likedPostsID), nil
 }
 
-func (s PostService) GetPostFeed(currentUserID uint, ctx context.Context) ([]dto.PostDTO, *domain.DomainError) {
+func (s PostService) GetPostFeed(ctx context.Context, currentUserID int) ([]dto.PostDTO, *domain.DomainError) {
 	posts, domainErr := s.postRepository.GetPostFeed(ctx)
 	if domainErr != nil {
 		return nil, domainErr
 	}
 
-	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(ctx, int(currentUserID))
+	likedPostsID, domainErr := s.postLikeRepository.GetLikedPostsID(ctx, currentUserID)
 	if domainErr != nil {
 		return nil, domainErr
 	}

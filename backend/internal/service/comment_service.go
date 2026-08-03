@@ -28,7 +28,7 @@ func NewCommentService(commentRepository CommentRepository, usernamesGetter User
 	}
 }
 
-func (s CommentService) CreateComment(commentDTO dto.CommentDTO, creatorID, postID int, ctx context.Context) (int, *domain.DomainError) {
+func (s CommentService) CreateComment(ctx context.Context, commentDTO dto.CommentDTO, creatorID, postID int) (int, *domain.DomainError) {
 	commentDTO.CreatorID = creatorID
 	commentDTO.PostID = postID
 	commentID, domainErr := s.commentRepository.Create(ctx, commentDTO)
@@ -39,7 +39,7 @@ func (s CommentService) CreateComment(commentDTO dto.CommentDTO, creatorID, post
 	return commentID, nil
 }
 
-func (s CommentService) DeleteComment(commentID, userID int, ctx context.Context) *domain.DomainError {
+func (s CommentService) DeleteComment(ctx context.Context, commentID, userID int) *domain.DomainError {
 	if domainErr := s.commentRepository.Delete(ctx, commentID, userID); domainErr != nil {
 		return domainErr
 	}
@@ -47,7 +47,7 @@ func (s CommentService) DeleteComment(commentID, userID int, ctx context.Context
 	return nil
 }
 
-func (s CommentService) GetAllCommentsByPostID(postID int, ctx context.Context) ([]dto.CommentDTO, *domain.DomainError) {
+func (s CommentService) GetAllCommentsByPostID(ctx context.Context, postID int) ([]dto.CommentDTO, *domain.DomainError) {
 	comments, domainErr := s.commentRepository.GetAllByPostID(ctx, postID)
 	if domainErr != nil {
 		return nil, domainErr

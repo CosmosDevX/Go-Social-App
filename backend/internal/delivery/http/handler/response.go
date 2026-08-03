@@ -1,8 +1,9 @@
-package utils
+package handler
 
 import (
 	"encoding/json"
 	"myapp/internal/domain"
+	"myapp/internal/utils"
 	"net/http"
 )
 
@@ -16,6 +17,6 @@ func WriteJSON(w http.ResponseWriter, data any) {
 
 func WriteError(w http.ResponseWriter, domainErr domain.DomainError) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(MapError(domainErr.Code))
+	w.WriteHeader(utils.MapError(domainErr.Code))
 	json.NewEncoder(w).Encode(domainErr)
 }

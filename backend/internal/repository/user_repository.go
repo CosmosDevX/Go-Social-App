@@ -23,7 +23,7 @@ func NewUserRepository(db *sqlx.DB) UserRepository {
 }
 
 func (r UserRepository) GetUserByName(ctx context.Context, username string) (*domain.User, *domain.DomainError) {
-	query := `SELECT * FROM users WHERE username = $1`
+	query := `SELECT id, username, password FROM users WHERE username = $1`
 	var user domain.User
 	err := r.db.GetContext(ctx, &user, query, username)
 	if err != nil {

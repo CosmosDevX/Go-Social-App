@@ -11,9 +11,9 @@ import (
 )
 
 type CommentService interface {
-	DeleteComment(commentID, userID int, ctx context.Context) *domain.DomainError
-	CreateComment(commentDTO dto.CommentDTO, creatorID, postID int, ctx context.Context) (int, *domain.DomainError)
-	GetAllCommentsByPostID(postID int, ctx context.Context) ([]dto.CommentDTO, *domain.DomainError)
+	DeleteComment(ctx context.Context, commentID, userID int) *domain.DomainError
+	CreateComment(ctx context.Context, commentDTO dto.CommentDTO, creatorID, postID int) (int, *domain.DomainError)
+	GetAllCommentsByPostID(ctx context.Context, postID int) ([]dto.CommentDTO, *domain.DomainError)
 }
 
 type CommentHandler struct {
@@ -30,71 +30,71 @@ func (h CommentHandler) HandleCreateComment(w http.ResponseWriter, r *http.Reque
 	ctx := r.Context()
 	var commentDTO dto.CommentDTO
 	if err := utils.Deserialize(r.Body, &commentDTO); err != nil {
-		utils.WriteError(w, *domain.NewDeserializingError("error during deserializing comment"))
+		WriteError(w, *domain.NewDeserializingError("error during deserializing comment"))
 		return
 	}
 
 	if validateErr := commentDTO.Validate(); validateErr != nil {
-		utils.WriteError(w, *domain.NewValidationError(validateErr.Error()))
+		WriteError(w, *domain.NewValidationError(validateErr.Error()))
 		return
 	}
 
-	creatorID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
+	creatorID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		utils.WriteError(w, *domain.NewParseError("error during parse creator id"))
+		WriteError(w, *domain.NewParseError("error during parse creator id"))
 		return
 	}
 
-	postID, parseErr := strconv.ParseUint(r.PathValue("post_id"), 10, 64)
+	postID, parseErr := strconv.Atoi(r.PathValue("post_id"))
 	if parseErr != nil {
-		utils.WriteError(w, *domain.NewParseError("error during parse post id"))
+		WriteError(w, *domain.NewParseError("error during parse post id"))
 		return
 	}
 
-	commentID, domainErr := h.commentService.CreateComment(commentDTO, int(creatorID), int(postID), ctx)
+	commentID, domainErr := h.commentService.CreateComment(ctx, commentDTO, creatorID, postID)
 	if domainErr != nil {
-		utils.WriteError(w, *domainErr)
+		WriteError(w, *domainErr)
 		return
 	}
 
-	utils.WriteJSON(w, map[string]int{"comment_id": commentID})
+	WriteJSON(w, map[string]int{"comment_id": commentID})
 }
 
 func (h CommentHandler) HandleGetAllCommentsOnPost(w http.ResponseWriter, r *http.Request) {
-	postID, parseErr := strconv.ParseUint(r.PathValue("post_id"), 10, 64)
+	postID, parseErr := strconv.Atoi(r.PathValue("post_id"))
 	if parseErr != nil {
-		utils.WriteError(w, *domain.NewParseError("error during parse post id"))
+		WriteError(w, *domain.NewParseError("error during parse post id"))
 		return
 	}
 
-	dtos, domainErr := h.commentService.GetAllCommentsByPostID(int(postID), r.Context())
+	dtos, domainErr := h.commentService.GetAllCommentsByPostID(r.Context(), postID)
 	if domainErr != nil {
-		utils.WriteError(w, *domainErr)
+		WriteError(w, *domainErr)
 		return
 	}
 
-	utils.WriteJSON(w, dtos)
+	WriteJSON(w, dtos)
 }
 
 func (h CommentHandler) HandleDeleteComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	userID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserContextKey{}))
+	userID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
+		WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
-	commentID, parseErr := strconv.ParseUint(r.PathValue("comment_id"), 10, 64)
+	commentID, parseErr := strconv.Atoi(r.PathValue("comment_id"))
 	if parseErr != nil {
-		utils.WriteError(w, *domain.NewParseError("error during parse comment id"))
+		WriteError(w, *domain.NewParseError("error during parse comment id"))
 		return
 	}
 
-	if domainErr := h.commentService.DeleteComment(int(commentID), int(userID), ctx); domainErr != nil {
-		utils.WriteError(w, *domainErr)
+	if domainErr := h.commentService.DeleteComment(ctx, commentID, userID); domainErr != nil {
+		WriteError(w, *domainErr)
 		return
 	}
 
-	utils.WriteJSON(w, map[string]string{"message": "comment deleted"})
+	WriteJSON(w, map[string]string{"message": "comment deleted"})
 }

@@ -32,7 +32,7 @@ func NewPostLikeService(unitOfWork repository.UnitOfWork, postRepository LikeUpd
 	}
 }
 
-func (s PostLikeService) LikePost(postID, userID int, ctx context.Context) (int, *domain.DomainError) {
+func (s PostLikeService) LikePost(ctx context.Context, postID, userID int) (int, *domain.DomainError) {
 	value, domainErr := s.unitOfWork.Do(ctx, func(ctx context.Context, repos repository.Repositories) (any, *domain.DomainError) {
 		result, domainErr := repos.PostLikeRepository.LikeExists(ctx, userID, postID)
 		if domainErr != nil {
@@ -62,7 +62,7 @@ func (s PostLikeService) LikePost(postID, userID int, ctx context.Context) (int,
 	return id, nil
 }
 
-func (s PostLikeService) DislikePost(postID, userID int, ctx context.Context) (int, *domain.DomainError) {
+func (s PostLikeService) DislikePost(ctx context.Context, postID, userID int) (int, *domain.DomainError) {
 	value, domainErr := s.unitOfWork.Do(ctx, func(ctx context.Context, repos repository.Repositories) (any, *domain.DomainError) {
 		result, domainErr := repos.PostLikeRepository.LikeExists(ctx, userID, postID)
 		if domainErr != nil {

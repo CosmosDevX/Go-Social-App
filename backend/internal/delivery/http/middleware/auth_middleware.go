@@ -8,7 +8,8 @@ import (
 	"strings"
 )
 
-type UserContextKey struct{}
+type UsernameContextKey struct{}
+type UserIDContextKey struct{}
 
 type AuthMiddleware struct {
 	jwtService authorization.JWTServiceInterface
@@ -40,7 +41,10 @@ func (m AuthMiddleware) Protect(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserContextKey{}, claims.Subject)
+		ctx := r.Context()
+
+		ctx = context.WithValue(ctx, UsernameContextKey{}, claims.Username)
+		ctx = context.WithValue(ctx, UserIDContextKey{}, claims.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

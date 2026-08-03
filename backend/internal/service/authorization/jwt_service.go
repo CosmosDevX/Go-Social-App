@@ -11,11 +11,13 @@ import (
 )
 
 type UserClaims struct {
+	UserID   int
+	Username string
 	jwt.RegisteredClaims
 }
 
 type JWTServiceInterface interface {
-	GenerateToken(userID string, expiresAt time.Duration) (string, *domain.DomainError)
+	GenerateToken(userID int, username string, expiresAt time.Duration) (string, *domain.DomainError)
 	ParseToken(tokenString string) (*UserClaims, *domain.DomainError)
 }
 
@@ -29,11 +31,12 @@ func NewJWTService(secretKey string) JWTServiceInterface {
 	}
 }
 
-func (s JWTService) GenerateToken(userID string, expiresAt time.Duration) (string, *domain.DomainError) {
+func (s JWTService) GenerateToken(userID int, username string, expiresAt time.Duration) (string, *domain.DomainError) {
 	claims := UserClaims{
+		UserID:   userID,
+		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "myapp",
-			Subject:   userID,
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresAt)),

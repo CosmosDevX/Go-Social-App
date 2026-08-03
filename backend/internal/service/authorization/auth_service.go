@@ -40,7 +40,7 @@ func NewAuthService(userGetter UserGetter, refreshTokenRepo RefreshTokenReposito
 	}
 }
 
-func (s AuthService) Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult, *domain.DomainError) {
+func (s AuthService) Auth(ctx context.Context, userDTO dto.UserDTO) (*AuthResult, *domain.DomainError) {
 	user, err := s.userGetter.GetUserByName(ctx, userDTO.Username)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (s AuthService) Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult
 		return nil, &domain.DomainError{Code: constants.InvalidPassword, Message: "passwords do not match"}
 	}
 
-	authResult, domainErr := s.generateTokenPair(strconv.Itoa(int(user.ID)))
+	authResult, domainErr := s.generateTokenPair(user.ID, user.Username)
 	if domainErr != nil {
 		return nil, domainErr
 	}
@@ -62,7 +62,7 @@ func (s AuthService) Auth(userDTO dto.UserDTO, ctx context.Context) (*AuthResult
 	return authResult, nil
 }
 
-func (s AuthService) Refresh(oldRefreshToken string, ctx context.Context) (*AuthResult, *domain.DomainError) {
+func (s AuthService) Refresh(ctx context.Context, oldRefreshToken string) (*AuthResult, *domain.DomainError) {
 	claims, domainErr := s.jwtService.ParseToken(oldRefreshToken)
 	if domainErr != nil {
 		return nil, domainErr
@@ -84,7 +84,7 @@ func (s AuthService) Refresh(oldRefreshToken string, ctx context.Context) (*Auth
 		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "invalid refresh token"}
 	}
 
-	authResult, domainErr := s.generateTokenPair(claims.Subject)
+	authResult, domainErr := s.generateTokenPair(claims.UserID, claims.Username)
 	if domainErr != nil {
 		return nil, domainErr
 	}
@@ -96,29 +96,29 @@ func (s AuthService) Refresh(oldRefreshToken string, ctx context.Context) (*Auth
 	return authResult, nil
 }
 
-func (s AuthService) Logout(userID, refreshToken string, ctx context.Context) *domain.DomainError {
-	if _, domainErr := s.refreshTokenRepository.Get(userID, constants.TokenWhiteListPrefix, ctx); domainErr != nil {
+func (s AuthService) Logout(ctx context.Context, userID int, refreshToken string) *domain.DomainError {
+	if _, domainErr := s.refreshTokenRepository.Get(strconv.Itoa(userID), constants.TokenWhiteListPrefix, ctx); domainErr != nil {
 		return domainErr
 	}
 
-	if domainErr := s.refreshTokenRepository.Delete(userID, constants.TokenWhiteListPrefix, ctx); domainErr != nil {
+	if domainErr := s.refreshTokenRepository.Delete(strconv.Itoa(userID), constants.TokenWhiteListPrefix, ctx); domainErr != nil {
 		return domainErr
 	}
 
-	if domainErr := s.refreshTokenRepository.Set(userID, refreshToken, constants.TokenBlackListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
+	if domainErr := s.refreshTokenRepository.Set(strconv.Itoa(userID), refreshToken, constants.TokenBlackListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
 		return domainErr
 	}
 
 	return nil
 }
 
-func (s AuthService) generateTokenPair(userID string) (*AuthResult, *domain.DomainError) {
-	accessToken, jwtError := s.jwtService.GenerateToken(userID, constants.AccessTokenExpiresAt)
+func (s AuthService) generateTokenPair(userID int, username string) (*AuthResult, *domain.DomainError) {
+	accessToken, jwtError := s.jwtService.GenerateToken(userID, username, constants.AccessTokenExpiresAt)
 	if jwtError != nil {
 		return nil, &domain.DomainError{Code: constants.AccessTokenError, Message: "error during the access token generating"}
 	}
 
-	refreshToken, jwtError := s.jwtService.GenerateToken(userID, constants.RefreshTokenExpiresAt)
+	refreshToken, jwtError := s.jwtService.GenerateToken(userID, username, constants.RefreshTokenExpiresAt)
 	if jwtError != nil {
 		return nil, &domain.DomainError{Code: constants.RefreshTokenError, Message: "error during the refresh token generating"}
 	}
