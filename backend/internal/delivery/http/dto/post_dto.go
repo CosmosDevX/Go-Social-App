@@ -1,17 +1,21 @@
 package dto
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 type PostDTO struct {
-	PostID          int    `json:"post_id"`
-	PostName        string `json:"post_name"`
-	PostDescription string `json:"post_description"`
-	CreatorID       int    `json:"creator_id"`
-	CreatorName     string `json:"creator_name"`
-	Likes           int    `json:"likes"`
-	IsLiked         bool   `json:"is_liked"`
-	CommentsCount   int    `json:"comments_count"`
-	ImageName       string `json:"image_name"`
+	PostID          int       `json:"post_id"`
+	PostName        string    `json:"post_name"`
+	PostDescription string    `json:"post_description"`
+	CreatorID       int       `json:"creator_id"`
+	CreatorName     string    `json:"creator_name"`
+	Likes           int       `json:"likes"`
+	IsLiked         bool      `json:"is_liked"`
+	CommentsCount   int       `json:"comments_count"`
+	ImageName       string    `json:"image_name"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 func (dto PostDTO) Validate() error {

@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Post, likePost, dislikePost, deletePost } from '../api/post'
+import { Post, likePost, dislikePost, deletePost, formatPostDate } from '../api/post'
 import { Comment, createComment, getCommentsByPostId, deleteComment } from '../api/comment'
 import { getErrorMessage, getPostImageUrl, isNotFoundError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
@@ -160,14 +160,24 @@ export function PostCard({ post, authorUsername, onLikeChange, onPostDelete }: P
           <h3 className="font-semibold text-lg text-white group-hover:text-violet-200 transition-colors">
             {post.post_name}
           </h3>
-          {displayName && (
-            <Link
-              to={`/profile/${displayName}`}
-              className="text-sm text-cyan-400/80 hover:text-cyan-300 transition-colors"
-            >
-              @{displayName}
-            </Link>
-          )}
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            {displayName && (
+              <Link
+                to={`/profile/${displayName}`}
+                className="text-sm text-cyan-400/80 hover:text-cyan-300 transition-colors"
+              >
+                @{displayName}
+              </Link>
+            )}
+            {post.created_at && (
+              <span
+                className="text-xs text-white/35"
+                title={new Date(post.created_at).toLocaleString('ru-RU')}
+              >
+                · {formatPostDate(post.created_at)}
+              </span>
+            )}
+          </div>
         </div>
 
         {isOwnPost && (

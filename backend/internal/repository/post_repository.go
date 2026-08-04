@@ -8,6 +8,7 @@ import (
 	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/domain"
+	"time"
 )
 
 type PostRepository struct {
@@ -21,9 +22,9 @@ func NewPostRepository(db DBTX) PostRepository {
 }
 
 func (r PostRepository) Create(ctx context.Context, postDTO dto.PostDTO) (int, *domain.DomainError) {
-	query := `INSERT INTO posts(name, description, creator_id, image_name) VALUES($1, $2, $3, $4) RETURNING id`
+	query := `INSERT INTO posts(name, description, creator_id, image_name, created_at) VALUES($1, $2, $3, $4, $5) RETURNING id`
 	var id int
-	err := r.db.QueryRowContext(ctx, query, postDTO.PostName, postDTO.PostDescription, postDTO.CreatorID, postDTO.ImageName).Scan(&id)
+	err := r.db.QueryRowContext(ctx, query, postDTO.PostName, postDTO.PostDescription, postDTO.CreatorID, postDTO.ImageName, time.Now().UTC()).Scan(&id)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return 0, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}

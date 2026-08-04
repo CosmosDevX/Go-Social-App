@@ -1,5 +1,6 @@
 CREATE TABLE post_likes (
 	id SERIAL PRIMARY KEY,
 	liked_user_id INTEGER,
-	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE
+	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+	UNIQUE(liked_user_id, post_id)
 );

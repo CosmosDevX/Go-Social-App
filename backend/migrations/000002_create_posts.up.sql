@@ -4,5 +4,6 @@ CREATE TABLE IF NOT EXISTS posts(
 	description VARCHAR(900),
 	creator_id INTEGER,
 	likes INTEGER DEFAULT 0,
-	image_name VARCHAR(300)
+	image_name VARCHAR(300),
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

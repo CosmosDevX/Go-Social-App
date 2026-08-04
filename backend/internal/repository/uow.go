@@ -53,7 +53,7 @@ func (u unitOfWork) Do(ctx context.Context, fn func(ctx context.Context, repos R
 		if err := tx.Rollback(); err != nil {
 			log.Println(err)
 		}
-		return nil, &domain.DomainError{Code: constants.TransactionError, Message: "transaction failed"}
+		return nil, domainErr
 	}
 
 	if err := tx.Commit(); err != nil {

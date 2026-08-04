@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"myapp/internal/constants"
 	"myapp/internal/domain"
 	"myapp/internal/repository"
 )
@@ -13,9 +12,8 @@ type LikeUpdater interface {
 }
 
 type PostLikeRepository interface {
-	CreateLike(ctx context.Context, likedUserID, postID int) *domain.DomainError
-	DeleteLike(ctx context.Context, likedUserID, postID int) *domain.DomainError
-	LikeExists(ctx context.Context, userID, postID int) (bool, *domain.DomainError)
+	CreateLike(ctx context.Context, likedUserID, postID int) (int, *domain.DomainError)
+	DeleteLike(ctx context.Context, likedUserID, postID int) (int, *domain.DomainError)
 }
 
 type PostLikeService struct {
@@ -34,21 +32,17 @@ func NewPostLikeService(unitOfWork repository.UnitOfWork, postRepository LikeUpd
 
 func (s PostLikeService) LikePost(ctx context.Context, postID, userID int) (int, *domain.DomainError) {
 	value, domainErr := s.unitOfWork.Do(ctx, func(ctx context.Context, repos repository.Repositories) (any, *domain.DomainError) {
-		result, domainErr := repos.PostLikeRepository.LikeExists(ctx, userID, postID)
-		if domainErr != nil {
-			return 0, domainErr
-		}
-		if result {
-			return 0, &domain.DomainError{Code: constants.CreateError, Message: "user already liked this post"}
-		}
-
-		likes, domainErr := repos.PostRepository.IncrementLikes(ctx, postID)
+		rowsAffected, domainErr := repos.PostLikeRepository.CreateLike(ctx, userID, postID)
 		if domainErr != nil {
 			return 0, domainErr
 		}
 
-		if domainErr := repos.PostLikeRepository.CreateLike(ctx, userID, postID); domainErr != nil {
-			return 0, domainErr
+		var likes int
+		if rowsAffected > 0 {
+			likes, domainErr = repos.PostRepository.IncrementLikes(ctx, postID)
+			if domainErr != nil {
+				return 0, domainErr
+			}
 		}
 
 		return likes, nil
@@ -64,21 +58,17 @@ func (s PostLikeService) LikePost(ctx context.Context, postID, userID int) (int,
 
 func (s PostLikeService) DislikePost(ctx context.Context, postID, userID int) (int, *domain.DomainError) {
 	value, domainErr := s.unitOfWork.Do(ctx, func(ctx context.Context, repos repository.Repositories) (any, *domain.DomainError) {
-		result, domainErr := repos.PostLikeRepository.LikeExists(ctx, userID, postID)
+		rowsAffected, domainErr := repos.PostLikeRepository.DeleteLike(ctx, userID, postID)
 		if domainErr != nil {
 			return 0, domainErr
 		}
-		if !result {
-			return 0, &domain.DomainError{Code: constants.CreateError, Message: "user not liked this post"}
-		}
+		var likes int
 
-		likes, domainErr := repos.PostRepository.DecrementLikes(ctx, postID)
-		if domainErr != nil {
-			return 0, domainErr
-		}
-
-		if domainErr := repos.PostLikeRepository.DeleteLike(ctx, userID, postID); domainErr != nil {
-			return 0, domainErr
+		if rowsAffected > 0 {
+			likes, domainErr = repos.PostRepository.DecrementLikes(ctx, postID)
+			if domainErr != nil {
+				return 0, domainErr
+			}
 		}
 
 		return likes, nil

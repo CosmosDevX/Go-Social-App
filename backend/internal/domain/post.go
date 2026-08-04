@@ -2,16 +2,18 @@ package domain
 
 import (
 	"myapp/internal/delivery/http/dto"
+	"time"
 )
 
 type Post struct {
-	ID              int    `db:"id"`
-	PostName        string `db:"name"`
-	PostDescription string `db:"description"`
-	CreatorID       int    `db:"creator_id"`
-	Likes           int    `db:"likes"`
-	ImageName       string `db:"image_name"`
-	CreatorUsername string `db:"creator_username"`
+	ID              int       `db:"id"`
+	PostName        string    `db:"name"`
+	PostDescription string    `db:"description"`
+	CreatorID       int       `db:"creator_id"`
+	Likes           int       `db:"likes"`
+	ImageName       string    `db:"image_name"`
+	CreatorUsername string    `db:"creator_username"`
+	CreatedAt       time.Time `db:"created_at"`
 }
 
 func (p Post) ToPostDTO() dto.PostDTO {
@@ -23,5 +25,6 @@ func (p Post) ToPostDTO() dto.PostDTO {
 		Likes:           p.Likes,
 		CreatorName:     p.CreatorUsername,
 		ImageName:       p.ImageName,
+		CreatedAt:       p.CreatedAt,
 	}
 }
