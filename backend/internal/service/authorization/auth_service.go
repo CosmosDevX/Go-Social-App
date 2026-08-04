@@ -68,7 +68,7 @@ func (s AuthService) Refresh(ctx context.Context, oldRefreshToken string) (*Auth
 		return nil, domainErr
 	}
 
-	dbRefreshToken, domainErr := s.refreshTokenRepository.Get(claims.Subject, constants.TokenWhiteListPrefix, ctx)
+	dbRefreshToken, domainErr := s.refreshTokenRepository.Get(strconv.Itoa(claims.UserID), constants.TokenWhiteListPrefix, ctx)
 	if domainErr != nil {
 		return nil, domainErr
 	}
@@ -76,7 +76,7 @@ func (s AuthService) Refresh(ctx context.Context, oldRefreshToken string) (*Auth
 		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "invalid refresh token"}
 	}
 
-	blacklistRefreshToken, domainErr := s.refreshTokenRepository.Get(claims.Subject, constants.TokenBlackListPrefix, ctx)
+	blacklistRefreshToken, domainErr := s.refreshTokenRepository.Get(strconv.Itoa(claims.UserID), constants.TokenBlackListPrefix, ctx)
 	if domainErr != nil {
 		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "error during get refresh token in blacklist"}
 	}
@@ -89,7 +89,7 @@ func (s AuthService) Refresh(ctx context.Context, oldRefreshToken string) (*Auth
 		return nil, domainErr
 	}
 
-	if domainErr := s.refreshTokenRepository.Set(claims.Subject, authResult.RefreshToken, constants.TokenWhiteListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
+	if domainErr := s.refreshTokenRepository.Set(strconv.Itoa(claims.UserID), authResult.RefreshToken, constants.TokenWhiteListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
 		return nil, domainErr
 	}
 

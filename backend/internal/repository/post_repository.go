@@ -55,10 +55,11 @@ func (r PostRepository) GetByID(ctx context.Context, postID int) (*domain.Post, 
 }
 
 func (r PostRepository) GetAllByID(ctx context.Context, userID int) ([]domain.Post, *domain.DomainError) {
-	query := `SELECT p.*, u.username AS creator_username FROM posts p
-			LEFT JOIN users u ON p.creator_id = u.id	 
-			WHERE creator_id = $1
-		 `
+	query := `
+		SELECT p.*, u.username AS creator_username FROM posts p
+		LEFT JOIN users u ON p.creator_id = u.id	 
+		WHERE creator_id = $1
+	`
 	var posts []domain.Post
 	err := r.db.SelectContext(ctx, &posts, query, userID)
 	if err != nil {
@@ -76,10 +77,23 @@ func (r PostRepository) GetAllByID(ctx context.Context, userID int) ([]domain.Po
 	return posts, nil
 }
 
-func (r PostRepository) GetAllByUsername(ctx context.Context, username string, userID int) ([]domain.Post, *domain.DomainError) {
-	posts, domainErr := r.GetAllByID(ctx, userID)
-	if domainErr != nil {
-		return nil, domainErr
+func (r PostRepository) GetAllByUsername(ctx context.Context, username string) ([]domain.Post, *domain.DomainError) {
+	query := `
+		SELECT p.*, u.username AS creator_username FROM posts p
+		LEFT JOIN users u ON p.creator_id = u.id
+		WHERE u.username = $1
+	`
+	var posts []domain.Post
+	err := r.db.SelectContext(ctx, &posts, query, username)
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, &domain.DomainError{Code: constants.NotFound, Message: "posts not found"}
+		}
+
 	}
 
 	return posts, nil

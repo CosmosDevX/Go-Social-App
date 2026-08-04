@@ -20,7 +20,7 @@ type PostRepository interface {
 	Create(ctx context.Context, postDTO dto.PostDTO) (int, *domain.DomainError)
 	GetByID(ctx context.Context, postID int) (*domain.Post, *domain.DomainError)
 	GetAllByID(ctx context.Context, userID int) ([]domain.Post, *domain.DomainError)
-	GetAllByUsername(ctx context.Context, username string, userID int) ([]domain.Post, *domain.DomainError)
+	GetAllByUsername(ctx context.Context, username string) ([]domain.Post, *domain.DomainError)
 	DeletePost(ctx context.Context, postID, userID int) *domain.DomainError
 	GetPostFeed(ctx context.Context) ([]domain.Post, *domain.DomainError)
 	GetImageName(ctx context.Context, postID int) (string, *domain.DomainError)
@@ -65,7 +65,7 @@ func (s PostService) CreatePost(ctx context.Context, postDTO dto.PostDTO, creato
 
 		postDTO.CreatorID = creatorID
 		postDTO.ImageName = filename
-		postID, domainErr := s.postRepository.Create(ctx, postDTO)
+		postID, domainErr := repos.PostRepository.Create(ctx, postDTO)
 		if domainErr != nil {
 			if err := s.fileManager.DeleteFile("/uploads", filename); err != nil {
 				log.Println(err.Error())
@@ -87,12 +87,12 @@ func (s PostService) CreatePost(ctx context.Context, postDTO dto.PostDTO, creato
 
 func (s PostService) DeletePost(ctx context.Context, postID, userID int) *domain.DomainError {
 	_, domainErr := s.unitOfWork.Do(ctx, func(ctx context.Context, repos repository.Repositories) (any, *domain.DomainError) {
-		imageName, domainErr := s.postRepository.GetImageName(ctx, postID)
+		imageName, domainErr := repos.PostRepository.GetImageName(ctx, postID)
 		if domainErr != nil {
 			return nil, domainErr
 		}
 
-		if domainErr := s.postRepository.DeletePost(ctx, postID, userID); domainErr != nil {
+		if domainErr := repos.PostRepository.DeletePost(ctx, postID, userID); domainErr != nil {
 			return nil, domainErr
 		}
 
@@ -135,7 +135,7 @@ func (s PostService) GetCurrentUserPosts(ctx context.Context, userID int) ([]dto
 }
 
 func (s PostService) GetUserPostsByUsername(ctx context.Context, username string, currentUserID int) ([]dto.PostDTO, *domain.DomainError) {
-	posts, err := s.postRepository.GetAllByUsername(ctx, username, currentUserID)
+	posts, err := s.postRepository.GetAllByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
