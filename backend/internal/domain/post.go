@@ -25,14 +25,3 @@ func (p Post) ToPostDTO() dto.PostDTO {
 		ImageName:       p.ImageName,
 	}
 }
-
-/*
-CREATE TABLE posts(
-	id SERIAL PRIMARY KEY,
-	name VARCHAR(100),
-	description VARCHAR(900),
-	creator_id INTEGER,
-	likes INTEGER DEFAULT 0,
-	image_name VARCHAR(300)
-);
-*/

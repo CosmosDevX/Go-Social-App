@@ -19,12 +19,3 @@ func (c Comment) ToCommentDTO() dto.CommentDTO {
 		CreatorID:       c.CreatorID,
 	}
 }
-
-/*
-CREATE TABLE comments(
-	id SERIAL PRIMARY KEY,
-	text VARCHAR(250),
-	post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-	creator_id INTEGER
-);
-*/
