@@ -18,7 +18,7 @@ func NewPostLikeRepository(db DBTX) PostLikeRepository {
 }
 
 func (r PostLikeRepository) GetLikedPostsID(ctx context.Context, userID int) ([]int, *domain.DomainError) {
-	query := `SELECT post_ID FROM post_likes WHERE liked_user_id = $1`
+	query := `SELECT post_id FROM post_likes WHERE liked_user_id = $1`
 	var postLikes []domain.PostLike
 	err := r.db.SelectContext(ctx, &postLikes, query, userID)
 	if err != nil {

@@ -6,6 +6,7 @@ const (
 	InvalidTokenError = "INVALID_TOKEN"
 	AccessTokenError  = "ACCESS_TOKEN_ERROR"
 	RefreshTokenError = "REFRESH_TOKEN_ERROR"
+	AuthError         = "AUTH_ERROR"
 
 	DatabaseError   = "DATABASE_ERROR"
 	NotFound        = "NOT_FOUND"

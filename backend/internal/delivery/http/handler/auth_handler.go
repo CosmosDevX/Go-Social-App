@@ -39,37 +39,37 @@ func (h AuthHandler) HandleAuth(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.rateLimiter.Allow(ctx, "auth:"+ip, redis_rate.PerMinute(5))
 	if err != nil {
-		WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests"))
+		utils.WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests"))
 		return
 	}
 
 	if res.Allowed == 0 {
 		w.Header().Set("Retry-After", fmt.Sprintf("%.0f", res.RetryAfter.Seconds()))
-		WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests. Try again later"))
+		utils.WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests. Try again later"))
 		return
 	}
 
 	var userDTO dto.UserDTO
 	if err := utils.Deserialize(r.Body, &userDTO); err != nil {
-		WriteError(w, *domain.NewDeserializingError("error during deserializing user"))
+		utils.WriteError(w, *domain.NewDeserializingError("error during deserializing user"))
 		return
 	}
 
 	validationErr := userDTO.Validate()
 	if validationErr != nil {
-		WriteError(w, *domain.NewValidationError(validationErr.Error()))
+		utils.WriteError(w, *domain.NewValidationError(validationErr.Error()))
 		return
 	}
 
 	authResult, domainErr := h.authService.Auth(ctx, userDTO)
 	if domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
 	http.SetCookie(w, h.newRefreshTokenCookie(authResult.RefreshToken))
 
-	WriteJSON(w, map[string]string{"access_token": authResult.AccessToken})
+	utils.WriteJSON(w, map[string]string{"access_token": authResult.AccessToken})
 }
 
 func (h AuthHandler) HandleRefresh(w http.ResponseWriter, r *http.Request) {
@@ -77,19 +77,19 @@ func (h AuthHandler) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 
 	tokenCookie, err := r.Cookie(constants.RefreshTokenKey)
 	if err != nil || tokenCookie.Value == "" {
-		WriteError(w, *domain.NewTokenError("refresh token not exists"))
+		utils.WriteError(w, *domain.NewTokenError("refresh token not exists"))
 		return
 	}
 
 	authResult, domainErr := h.authService.Refresh(ctx, tokenCookie.Value)
 	if domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
 	http.SetCookie(w, h.newRefreshTokenCookie(authResult.RefreshToken))
 
-	WriteJSON(w, map[string]string{"access_token": authResult.AccessToken})
+	utils.WriteJSON(w, map[string]string{"access_token": authResult.AccessToken})
 }
 
 func (h AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
@@ -97,22 +97,22 @@ func (h AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 
 	tokenCookie, err := r.Cookie(constants.RefreshTokenKey)
 	if err != nil || tokenCookie.Value == "" {
-		WriteJSON(w, map[string]string{"message": "refresh token not exists"})
+		utils.WriteJSON(w, map[string]string{"message": "refresh token not exists"})
 		return
 	}
 
 	userID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse user id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
 	if domainErr := h.authService.Logout(ctx, userID, tokenCookie.Value); domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	WriteJSON(w, map[string]string{"message": "logout successful"})
+	utils.WriteJSON(w, map[string]string{"message": "logout successful"})
 }
 
 func (h AuthHandler) newRefreshTokenCookie(refreshToken string) *http.Cookie {

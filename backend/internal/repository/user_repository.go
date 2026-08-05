@@ -10,6 +10,7 @@ import (
 	"myapp/internal/domain"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type UserRepository struct {
@@ -47,6 +48,10 @@ func (r UserRepository) CreateUser(ctx context.Context, userDTO dto.UserDTO) (in
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return 0, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return 0, &domain.DomainError{Code: constants.UniqueViolation, Message: "username already taken"}
 		}
 
 		return 0, &domain.DomainError{Code: constants.CreateError, Message: "error during create user"}

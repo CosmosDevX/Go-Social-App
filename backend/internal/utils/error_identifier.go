@@ -13,14 +13,14 @@ func MapError(code string) int {
 		return http.StatusGatewayTimeout
 	case constants.InvalidPassword:
 		return http.StatusUnauthorized
-	case constants.TokenSignError:
+	case constants.TokenSignError, constants.InvalidTokenError, constants.AuthError:
 		return http.StatusUnauthorized
-	case constants.InvalidTokenError:
-		return http.StatusUnauthorized
-	case constants.ValidationError:
+	case constants.ValidationError, constants.DeserializingError, constants.FileError, constants.ParseError:
 		return http.StatusBadRequest
-	case constants.DeserializingError:
-		return http.StatusBadRequest
+	case constants.TooManyRequests:
+		return http.StatusTooManyRequests
+	case constants.UniqueViolation:
+		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
 	}

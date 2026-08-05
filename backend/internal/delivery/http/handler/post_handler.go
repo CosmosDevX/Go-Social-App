@@ -36,7 +36,7 @@ func (h PostHandler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 10*1024*1024)
 
 	if err := r.ParseMultipartForm(20 * 1024 * 1024); err != nil {
-		WriteError(w, *domain.NewFileError("file too large"))
+		utils.WriteError(w, *domain.NewFileError("file too large"))
 		return
 	}
 
@@ -46,7 +46,7 @@ func (h PostHandler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 		contentType = header.Header.Get("Content-Type")
 	}
 	if file != nil && !strings.HasPrefix(contentType, "image/") {
-		WriteError(w, *domain.NewFileError("invalid file type"))
+		utils.WriteError(w, *domain.NewFileError("invalid file type"))
 		return
 	}
 	if file != nil {
@@ -62,23 +62,23 @@ func (h PostHandler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if validateErr := postDTO.Validate(); validateErr != nil {
-		WriteError(w, *domain.NewValidationError(validateErr.Error()))
+		utils.WriteError(w, *domain.NewValidationError(validateErr.Error()))
 		return
 	}
 
 	creatorID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse user id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
 	postID, domainErr := h.postService.CreatePost(ctx, postDTO, creatorID, file, header)
 	if domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	WriteJSON(w, map[string]int{"post_id": postID})
+	utils.WriteJSON(w, map[string]int{"post_id": postID})
 }
 
 func (h PostHandler) HandleGetCurrentUserPosts(w http.ResponseWriter, r *http.Request) {
@@ -86,17 +86,17 @@ func (h PostHandler) HandleGetCurrentUserPosts(w http.ResponseWriter, r *http.Re
 
 	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse creator id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse creator id"))
 		return
 	}
 
 	dtos, domainErr := h.postService.GetCurrentUserPosts(ctx, parsedUserID)
 	if domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	WriteJSON(w, dtos)
+	utils.WriteJSON(w, dtos)
 }
 
 func (h PostHandler) HandleGetUserPostsByUsername(w http.ResponseWriter, r *http.Request) {
@@ -104,17 +104,17 @@ func (h PostHandler) HandleGetUserPostsByUsername(w http.ResponseWriter, r *http
 
 	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse user id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
 	dtos, domainErr := h.postService.GetUserPostsByUsername(ctx, r.PathValue("username"), parsedUserID)
 	if domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	WriteJSON(w, dtos)
+	utils.WriteJSON(w, dtos)
 }
 
 func (h PostHandler) HandleGetPostFeed(w http.ResponseWriter, r *http.Request) {
@@ -122,17 +122,17 @@ func (h PostHandler) HandleGetPostFeed(w http.ResponseWriter, r *http.Request) {
 
 	parsedUserID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse user id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
 	dtos, domainErr := h.postService.GetPostFeed(ctx, parsedUserID)
 	if domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	WriteJSON(w, dtos)
+	utils.WriteJSON(w, dtos)
 }
 
 func (h PostHandler) HandleDeletePost(w http.ResponseWriter, r *http.Request) {
@@ -140,20 +140,20 @@ func (h PostHandler) HandleDeletePost(w http.ResponseWriter, r *http.Request) {
 
 	userID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse user id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
 	postID, parseErr := strconv.Atoi(r.PathValue("post_id"))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse post id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse post id"))
 		return
 	}
 
 	if domainErr := h.postService.DeletePost(ctx, postID, userID); domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	WriteJSON(w, map[string]string{"message": "post deleted"})
+	utils.WriteJSON(w, map[string]string{"message": "post deleted"})
 }

@@ -29,23 +29,23 @@ func (h PostLikeHandler) HandleLikePost(w http.ResponseWriter, r *http.Request) 
 
 	userID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse user id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
 	postID, parseErr := strconv.Atoi(r.PathValue("post_id"))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse post id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse post id"))
 		return
 	}
 
 	likes, domainErr := h.postLikeService.LikePost(ctx, postID, userID)
 	if domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	WriteJSON(w, map[string]int{"likes": likes})
+	utils.WriteJSON(w, map[string]int{"likes": likes})
 }
 
 func (h PostLikeHandler) HandleDislikePost(w http.ResponseWriter, r *http.Request) {
@@ -53,21 +53,21 @@ func (h PostLikeHandler) HandleDislikePost(w http.ResponseWriter, r *http.Reques
 
 	userID, parseErr := utils.ParseUserID(ctx.Value(middleware.UserIDContextKey{}))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse user id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse user id"))
 		return
 	}
 
 	postID, parseErr := strconv.Atoi(r.PathValue("post_id"))
 	if parseErr != nil {
-		WriteError(w, *domain.NewParseError("error during parse post id"))
+		utils.WriteError(w, *domain.NewParseError("error during parse post id"))
 		return
 	}
 
 	likes, domainErr := h.postLikeService.DislikePost(ctx, postID, userID)
 	if domainErr != nil {
-		WriteError(w, *domainErr)
+		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	WriteJSON(w, map[string]int{"likes": likes})
+	utils.WriteJSON(w, map[string]int{"likes": likes})
 }
