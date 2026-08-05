@@ -9,8 +9,9 @@ import (
 )
 
 type Config struct {
-	SecretKey          string
-	DBConnectionString string
+	SecretKey                  string
+	DBConnectionString         string
+	DBConnectionStringForTests string
 }
 
 func (c *Config) Load() {
@@ -20,4 +21,5 @@ func (c *Config) Load() {
 
 	c.SecretKey = os.Getenv("SECRET_KEY")
 	c.DBConnectionString = os.Getenv("DB_CONNECTION_STRING")
+	c.DBConnectionStringForTests = os.Getenv("DB_CONNECTION_STRING_FOR_TESTS")
 }

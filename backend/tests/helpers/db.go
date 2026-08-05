@@ -16,7 +16,7 @@ import (
 func NewTestDB(t *testing.T) *sqlx.DB {
 	t.Helper()
 	cfg := LoadTestConfig()
-	connStr := strings.Replace(cfg.DBConnectionString, "host=localhost", "host=127.0.0.1", 1)
+	connStr := strings.Replace(cfg.DBConnectionStringForTests, "host=localhost", "host=127.0.0.1", 1)
 	db, err := sqlx.Connect("postgres", connStr)
 	require.NoError(t, err, "failed to connect to test database")
 

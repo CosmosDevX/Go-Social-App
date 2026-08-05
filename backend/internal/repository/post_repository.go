@@ -63,12 +63,8 @@ func (r PostRepository) GetAllByID(ctx context.Context, userID int) ([]domain.Po
 	var posts []domain.Post
 	err := r.db.SelectContext(ctx, &posts, query, userID)
 	if err != nil {
-		log.Println(err)
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
-		}
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &domain.DomainError{Code: constants.NotFound, Message: "posts not found"}
 		}
 
 		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during fing posts by user id"}
@@ -86,14 +82,11 @@ func (r PostRepository) GetAllByUsername(ctx context.Context, username string) (
 	var posts []domain.Post
 	err := r.db.SelectContext(ctx, &posts, query, username)
 	if err != nil {
-		log.Println(err)
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
 		}
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, &domain.DomainError{Code: constants.NotFound, Message: "posts not found"}
-		}
 
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during fing posts by username"}
 	}
 
 	return posts, nil
@@ -155,7 +148,7 @@ func (r PostRepository) DeletePost(ctx context.Context, postID, userID int) *dom
 func (r PostRepository) GetPostFeed(ctx context.Context) ([]domain.Post, *domain.DomainError) {
 	query := `SELECT p.*, u.username AS creator_username FROM posts p
     	LEFT JOIN users u ON p.creator_id = u.id
-    	ORDER BY RANDOM() LIMIT 30`
+    	ORDER BY p.created_at DESC LIMIT 30`
 	var posts []domain.Post
 	err := r.db.SelectContext(ctx, &posts, query)
 	if err != nil {

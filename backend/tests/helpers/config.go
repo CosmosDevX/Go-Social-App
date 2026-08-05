@@ -21,7 +21,7 @@ func LoadTestConfig() config.Config {
 	}
 
 	return config.Config{
-		SecretKey:          os.Getenv("SECRET_KEY"),
-		DBConnectionString: os.Getenv("DB_CONNECTION_STRING"),
+		SecretKey:                  os.Getenv("SECRET_KEY"),
+		DBConnectionStringForTests: os.Getenv("DB_CONNECTION_STRING_FOR_TESTS"),
 	}
 }
