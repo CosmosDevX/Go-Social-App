@@ -76,7 +76,7 @@ func TestPostLikeService_LikePost(t *testing.T) {
 			uow := new(helpers.MockUnitOfWork)
 			tt.setup(uow)
 
-			svc := service.NewPostLikeService(uow, nil)
+			svc := service.NewPostLikeService(uow)
 			likes, domainErr := svc.LikePost(ctx, tt.postID, tt.userID)
 
 			if tt.wantErrCode != "" {
@@ -131,7 +131,7 @@ func TestPostLikeService_DislikePost(t *testing.T) {
 			uow := new(helpers.MockUnitOfWork)
 			tt.setup(uow)
 
-			svc := service.NewPostLikeService(uow, nil)
+			svc := service.NewPostLikeService(uow)
 			likes, domainErr := svc.DislikePost(ctx, tt.postID, tt.userID)
 
 			if tt.wantErrCode != "" {

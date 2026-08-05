@@ -3,6 +3,7 @@ package middleware
 
 import (
 	"context"
+	"myapp/internal/logger"
 	"myapp/internal/service/authorization"
 	"net/http"
 	"strings"
@@ -37,14 +38,16 @@ func (m AuthMiddleware) Protect(next http.HandlerFunc) http.HandlerFunc {
 
 		claims, err := m.jwtService.ParseToken(tokenString)
 		if err != nil {
+			logger.FromContext(r.Context()).Warn("auth middleware: invalid token", "code", err.Code)
 			http.Error(w, err.Message, http.StatusUnauthorized)
 			return
 		}
 
 		ctx := r.Context()
-
 		ctx = context.WithValue(ctx, UsernameContextKey{}, claims.Username)
 		ctx = context.WithValue(ctx, UserIDContextKey{}, claims.UserID)
+		ctx = logger.WithUserID(ctx, claims.UserID)
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

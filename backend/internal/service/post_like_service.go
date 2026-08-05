@@ -6,25 +6,18 @@ import (
 	"myapp/internal/repository"
 )
 
-type LikeUpdater interface {
-	IncrementLikes(ctx context.Context, postID int) (int, *domain.DomainError)
-	DecrementLikes(ctx context.Context, postID int) (int, *domain.DomainError)
-}
-
 type PostLikeRepository interface {
 	CreateLike(ctx context.Context, likedUserID, postID int) (int, *domain.DomainError)
 	DeleteLike(ctx context.Context, likedUserID, postID int) (int, *domain.DomainError)
 }
 
 type PostLikeService struct {
-	unitOfWork         repository.UnitOfWork
-	postLikeRepository PostLikeRepository
+	unitOfWork repository.UnitOfWork
 }
 
-func NewPostLikeService(unitOfWork repository.UnitOfWork, postLikeRepository PostLikeRepository) PostLikeService {
+func NewPostLikeService(unitOfWork repository.UnitOfWork) PostLikeService {
 	return PostLikeService{
-		unitOfWork:         unitOfWork,
-		postLikeRepository: postLikeRepository,
+		unitOfWork: unitOfWork,
 	}
 }
 

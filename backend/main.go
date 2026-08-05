@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"myapp/internal/config"
 	"myapp/internal/delivery/http/handler"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/infrastructure"
+	"myapp/internal/logger"
 	"myapp/internal/repository"
 	"myapp/internal/service"
 	"myapp/internal/service/authorization"
@@ -21,13 +22,24 @@ import (
 )
 
 func main() {
-	config := config.Config{}
-	config.Load()
+	cfg := config.Config{}
+	cfg.Load()
+
+	logFormat := os.Getenv("LOG_FORMAT")
+	if logFormat == "" {
+		logFormat = "text"
+	}
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "info"
+	}
+	logger.Setup(logFormat, logLevel)
+
+	slog.Info("starting application")
 
 	//initialize clients
 	redisClient := infrastructure.NewRedisClient()
-	sqlxClient := infrastructure.NewSQLxClient(config.DBConnectionString)
-	// base migration sqlxClient.CreateTables("CREATE TABLE posts(id SERIAL PRIMARY KEY,name VARCHAR(100),description VARCHAR(900),creator_id INTEGER,likes INTEGER DEFAULT 0,image_name VARCHAR(300)); CREATE TABLE post_likes(id SERIAL PRIMARY KEY,liked_user_id INTEGER,post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE); CREATE TABLE comments(id SERIAL PRIMARY KEY,text VARCHAR(250),post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,creator_id INTEGER); CREATE TABLE users(id SERIAL PRIMARY KEY,username VARCHAR(60) UNIQUE NOT NULL,password VARCHAR(100) NOT NULL);")
+	sqlxClient := infrastructure.NewSQLxClient(cfg.DBConnectionString)
 
 	rateLimiter := redis_rate.NewLimiter(redisClient.GetClient())
 
@@ -43,11 +55,11 @@ func main() {
 	refreshTokenRepository := repository.NewRefreshTokenRepository(redisClient.GetClient())
 
 	//initialize services
-	jwtService := authorization.NewJWTService(config.SecretKey)
+	jwtService := authorization.NewJWTService(cfg.SecretKey)
 	authService := authorization.NewAuthService(userRepository, refreshTokenRepository, jwtService)
 	userService := service.NewUserService(userRepository)
 	postService := service.NewPostService(unitOfWork, postRepository, postLikeRepository, commentRepository, fileManager, userRepository)
-	postLikeService := service.NewPostLikeService(unitOfWork, postLikeRepository)
+	postLikeService := service.NewPostLikeService(unitOfWork)
 	commentService := service.NewCommentService(commentRepository, userRepository)
 
 	//initialize handlers
@@ -84,32 +96,45 @@ func main() {
 	mux.HandleFunc("DELETE /comment/{comment_id}", authMiddleware.Protect(commentHandler.HandleDeleteComment))
 
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
-	httpService := service.NewHTTPService(http.TimeoutHandler(middleware.CorsMiddleware(mux), time.Minute, "request timeout"))
+
+	handlerChain := http.TimeoutHandler(
+		middleware.LoggingMiddleware(
+			middleware.CorsMiddleware(mux),
+		),
+		time.Minute,
+		"request timeout",
+	)
+
+	httpService := service.NewHTTPService(handlerChain)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
+		slog.Info("http server listening", "addr", ":8080")
 		if err := httpService.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Println(err)
+			slog.Error("server error", "error", err)
 			quit <- syscall.SIGTERM
 		}
 	}()
 
 	<-quit
+	slog.Info("shutdown signal received")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := httpService.Server.Shutdown(ctx); err != nil {
-		log.Println("error during shutdown server")
+		slog.Error("error during server shutdown", "error", err)
 	}
 
 	if err := redisClient.Shutdown(); err != nil {
-		log.Println(err)
+		slog.Error("error during redis shutdown", "error", err)
 	}
 
 	if err := sqlxClient.Shutdown(); err != nil {
-		log.Println(err)
+		slog.Error("error during database shutdown", "error", err)
 	}
+
+	slog.Info("application stopped")
 }
