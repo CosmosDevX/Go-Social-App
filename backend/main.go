@@ -47,7 +47,7 @@ func main() {
 	authService := authorization.NewAuthService(userRepository, refreshTokenRepository, jwtService)
 	userService := service.NewUserService(userRepository)
 	postService := service.NewPostService(unitOfWork, postRepository, postLikeRepository, commentRepository, fileManager, userRepository)
-	postLikeService := service.NewPostLikeService(unitOfWork, postRepository, postLikeRepository)
+	postLikeService := service.NewPostLikeService(unitOfWork, postLikeRepository)
 	commentService := service.NewCommentService(commentRepository, userRepository)
 
 	//initialize handlers

@@ -18,14 +18,12 @@ type PostLikeRepository interface {
 
 type PostLikeService struct {
 	unitOfWork         repository.UnitOfWork
-	postRepository     LikeUpdater
 	postLikeRepository PostLikeRepository
 }
 
-func NewPostLikeService(unitOfWork repository.UnitOfWork, postRepository LikeUpdater, postLikeRepository PostLikeRepository) PostLikeService {
+func NewPostLikeService(unitOfWork repository.UnitOfWork, postLikeRepository PostLikeRepository) PostLikeService {
 	return PostLikeService{
 		unitOfWork:         unitOfWork,
-		postRepository:     postRepository,
 		postLikeRepository: postLikeRepository,
 	}
 }
