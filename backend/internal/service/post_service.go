@@ -13,7 +13,7 @@ import (
 )
 
 type CommentCounter interface {
-	CountCommentsOnPost(ctx context.Context, postID int) (int, *domain.DomainError)
+	CountCommentsOnPosts(ctx context.Context, postIDs []int) (map[int]int, *domain.DomainError)
 }
 
 type PostRepository interface {
@@ -131,7 +131,12 @@ func (s PostService) GetCurrentUserPosts(ctx context.Context, userID int) ([]dto
 		return nil, domainErr
 	}
 
-	return s.makePostDTOs(posts, likedPostsID), nil
+	dtos, domainErr := s.makePostDTOs(ctx, posts, likedPostsID)
+	if domainErr != nil {
+		return nil, domainErr
+	}
+
+	return dtos, nil
 }
 
 func (s PostService) GetUserPostsByUsername(ctx context.Context, username string, currentUserID int) ([]dto.PostDTO, *domain.DomainError) {
@@ -145,7 +150,12 @@ func (s PostService) GetUserPostsByUsername(ctx context.Context, username string
 		return nil, domainErr
 	}
 
-	return s.makePostDTOs(posts, likedPostsID), nil
+	dtos, domainErr := s.makePostDTOs(ctx, posts, likedPostsID)
+	if domainErr != nil {
+		return nil, domainErr
+	}
+
+	return dtos, nil
 }
 
 func (s PostService) GetPostFeed(ctx context.Context, currentUserID int) ([]dto.PostDTO, *domain.DomainError) {
@@ -159,21 +169,36 @@ func (s PostService) GetPostFeed(ctx context.Context, currentUserID int) ([]dto.
 		return nil, domainErr
 	}
 
-	return s.makePostDTOs(posts, likedPostsID), nil
+	dtos, domainErr := s.makePostDTOs(ctx, posts, likedPostsID)
+	if domainErr != nil {
+		return nil, domainErr
+	}
+
+	return dtos, nil
 }
 
-func (s PostService) makePostDTOs(posts []domain.Post, likedPostsID []int) []dto.PostDTO {
+func (s PostService) makePostDTOs(ctx context.Context, posts []domain.Post, likedPostsID []int) ([]dto.PostDTO, *domain.DomainError) {
 	dtos := make([]dto.PostDTO, len(posts))
 	for i, post := range posts {
 		dtos[i] = post.ToPostDTO()
 		if slices.Contains(likedPostsID, dtos[i].PostID) {
 			dtos[i].IsLiked = true
 		}
-		commentsCount, domainErr := s.commentRepository.CountCommentsOnPost(context.TODO(), int(dtos[i].PostID)) //TODO: remove - sql query in for
-		if domainErr == nil {
-			dtos[i].CommentsCount = commentsCount
-		}
 	}
 
-	return dtos
+	postIDs := make([]int, len(dtos))
+	for i := range postIDs {
+		postIDs[i] = dtos[i].PostID
+	}
+
+	countMap, domainErr := s.commentRepository.CountCommentsOnPosts(ctx, postIDs)
+	if domainErr != nil {
+		return nil, domainErr
+	}
+
+	for i := range dtos {
+		dtos[i].CommentsCount = countMap[dtos[i].PostID]
+	}
+
+	return dtos, nil
 }

@@ -8,6 +8,7 @@ import (
 	"myapp/internal/domain"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
 type CommentRepository struct {
@@ -71,6 +72,38 @@ func (r CommentRepository) CountCommentsOnPost(ctx context.Context, postID int) 
 	}
 
 	return count, nil
+}
+
+func (r CommentRepository) CountCommentsOnPosts(ctx context.Context, postIDs []int) (map[int]int, *domain.DomainError) {
+	query := `
+		SELECT post_id, COUNT(*) as count 
+		FROM comments 
+		WHERE post_id = ANY($1)
+		GROUP BY post_id
+	`
+	var results []struct {
+		PostID int `db:"post_id"`
+		Count  int `db:"count"`
+	}
+	err := r.db.SelectContext(ctx, &results, query, pq.Array(postIDs))
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
+		}
+
+		return nil, &domain.DomainError{Code: constants.FindError, Message: "error during count comments on posts"}
+	}
+
+	countMap := make(map[int]int)
+	for _, id := range postIDs {
+		countMap[id] = 0
+	}
+
+	for _, result := range results {
+		countMap[result.PostID] = result.Count
+	}
+
+	return countMap, nil
 }
 
 func (r CommentRepository) Delete(ctx context.Context, commentID, userID int) *domain.DomainError {
