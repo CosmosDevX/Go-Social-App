@@ -1,0 +1,597 @@
+basePath: /api
+definitions:
+  dto.CommentDTO:
+    properties:
+      comment_id:
+        type: integer
+      comment_text:
+        type: string
+      creator_id:
+        type: integer
+      creator_username:
+        type: string
+      post_id:
+        type: integer
+    type: object
+  dto.PostDTO:
+    properties:
+      comments_count:
+        type: integer
+      created_at:
+        type: string
+      creator_id:
+        type: integer
+      creator_name:
+        type: string
+      image_name:
+        type: string
+      is_liked:
+        type: boolean
+      likes:
+        type: integer
+      post_description:
+        type: string
+      post_id:
+        type: integer
+      post_name:
+        type: string
+    type: object
+  dto.UserDTO:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handler.AccessTokenResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+    type: object
+  handler.CommentIDResponse:
+    properties:
+      comment_id:
+        example: 7
+        type: integer
+    type: object
+  handler.ErrorResponse:
+    properties:
+      code:
+        example: VALIDATION_ERROR
+        type: string
+      message:
+        example: username cannot be bigger than 60 and lower than 3
+        type: string
+    type: object
+  handler.LikesResponse:
+    properties:
+      likes:
+        example: 15
+        type: integer
+    type: object
+  handler.MessageResponse:
+    properties:
+      message:
+        example: logout successful
+        type: string
+    type: object
+  handler.PostIDResponse:
+    properties:
+      post_id:
+        example: 42
+        type: integer
+    type: object
+  handler.UserIDResponse:
+    properties:
+      user_id:
+        example: 1
+        type: integer
+    type: object
+  handler.UsernameResponse:
+    properties:
+      username:
+        example: john_doe
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend API для социальной сети (посты, комментарии, лайки, аутентификаация)
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: My Social web API
+  version: "1.0"
+paths:
+  /auth:
+    post:
+      consumes:
+      - application/json
+      description: Логин пользователя. При успехе возвращает access_token и ставит
+        refresh_token в HttpOnly cookie.
+      parameters:
+      - description: username + password
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AccessTokenResponse'
+        "400":
+          description: VALIDATION_ERROR / DESERIALIZING_ERROR
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: INVALID_PASSWORD / AUTH_ERROR
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: UNIQUE_VIOLATION
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "429":
+          description: TOO_MANY_REQUESTS
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Авторизация / Регистрация
+      tags:
+      - auth
+  /comment/{comment_id}:
+    delete:
+      description: Удаляет комментарий (только автор)
+      parameters:
+      - description: ID комментария
+        in: path
+        name: comment_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить комментарий
+      tags:
+      - comments
+  /comment/all/{post_id}:
+    get:
+      description: Возвращает список комментариев к посту
+      parameters:
+      - description: ID поста
+        in: path
+        name: post_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CommentDTO'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Все комментарии поста
+      tags:
+      - comments
+  /comment/create/{post_id}:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет комментарий к посту (текст 1-250 символов)
+      parameters:
+      - description: ID поста
+        in: path
+        name: post_id
+        required: true
+        type: integer
+      - description: Текст комментария
+        in: body
+        name: comment
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CommentDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.CommentIDResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать комментарий
+      tags:
+      - comments
+  /logout:
+    post:
+      description: Инвалидирует refresh token текущего пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Выход из системы
+      tags:
+      - auth
+  /post/{post_id}:
+    delete:
+      description: Удаляет пост (только автор)
+      parameters:
+      - description: ID поста
+        in: path
+        name: post_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить пост
+      tags:
+      - posts
+  /post/{username}/all:
+    get:
+      description: Возвращает посты указанного пользователя (с флагом is_liked для
+        текущего юзера)
+      parameters:
+      - description: Username автора
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PostDTO'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Посты пользователя по username
+      tags:
+      - posts
+  /post/create:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Создаёт пост с опциональным изображением (multipart/form-data).
+        Макс. размер файла 10 МБ.
+      parameters:
+      - description: Название поста (5-100 символов)
+        in: formData
+        name: post_name
+        required: true
+        type: string
+      - description: Описание (1-900 символов)
+        in: formData
+        name: post_description
+        required: true
+        type: string
+      - description: Изображение (только image/*)
+        in: formData
+        name: post_image
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.PostIDResponse'
+        "400":
+          description: VALIDATION_ERROR / FILE_ERROR
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать пост
+      tags:
+      - posts
+  /post/current_user/all:
+    get:
+      description: Возвращает все посты авторизованного пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PostDTO'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Посты текущего пользователя
+      tags:
+      - posts
+  /post/dislike/{post_id}:
+    post:
+      description: Убирает лайк с поста. Возвращает актуальное количество лайков.
+      parameters:
+      - description: ID поста
+        in: path
+        name: post_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.LikesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Убрать лайк
+      tags:
+      - likes
+  /post/feed:
+    get:
+      description: Возвращает ленту постов для текущего пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PostDTO'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Лента постов
+      tags:
+      - posts
+  /post/like/{post_id}:
+    post:
+      description: Ставит лайк посту. Возвращает актуальное количество лайков.
+      parameters:
+      - description: ID поста
+        in: path
+        name: post_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.LikesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Поставить лайк
+      tags:
+      - likes
+  /refresh:
+    post:
+      description: Берёт refresh_token из cookie и выдаёт новый access_token + новый
+        refresh_token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AccessTokenResponse'
+        "401":
+          description: INVALID_TOKEN / REFRESH_TOKEN_ERROR
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Обновление access token
+      tags:
+      - auth
+  /user/create:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт пользователя. Username 3-60 символов, password 10-100.
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UserDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.UserIDResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: UNIQUE_VIOLATION
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Регистрация нового пользователя
+      tags:
+      - users
+  /user/current/profile:
+    get:
+      description: Возвращает username авторизованного пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.UsernameResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Профиль текущего пользователя
+      tags:
+      - users
+  /user/get_username_by_id/{user_id}:
+    get:
+      description: Возвращает username пользователя по его ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.UsernameResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Получить username по ID
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT access token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -25,6 +25,17 @@ func NewUserHandler(userService UserService) UserHandler {
 	}
 }
 
+// HandleCreateUser godoc
+// @Summary      Регистрация нового пользователя
+// @Description  Создаёт пользователя. Username 3-60 символов, password 10-100.
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        user  body      dto.UserDTO  true  "Данные пользователя"
+// @Success      200  {object}  UserIDResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      409  {object}  ErrorResponse  "UNIQUE_VIOLATION"
+// @Router       /user/create [post]
 func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	var userDTO dto.UserDTO
 	if err := utils.Deserialize(r.Body, &userDTO); err != nil {
@@ -47,6 +58,16 @@ func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, map[string]int{"user_id": id})
 }
 
+// HandleCurrentUserProfile godoc
+// @Summary      Профиль текущего пользователя
+// @Description  Возвращает username авторизованного пользователя
+// @Tags         users
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  UsernameResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /user/current/profile [get]
 func (h UserHandler) HandleCurrentUserProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -65,6 +86,16 @@ func (h UserHandler) HandleCurrentUserProfile(w http.ResponseWriter, r *http.Req
 	utils.WriteJSON(w, map[string]string{"username": username})
 }
 
+// HandleGetUsernameByID godoc
+// @Summary      Получить username по ID
+// @Description  Возвращает username пользователя по его ID
+// @Tags         users
+// @Produce      json
+// @Param        user_id  path  int  true  "ID пользователя"
+// @Success      200  {object}  UsernameResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /user/get_username_by_id/{user_id} [get]
 func (h UserHandler) HandleGetUsernameByID(w http.ResponseWriter, r *http.Request) {
 	username, domainErr := h.userService.GetUsernameByID(r.Context(), r.PathValue("user_id"))
 	if domainErr != nil {

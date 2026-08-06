@@ -26,6 +26,20 @@ func NewCommentHandler(commentService CommentService) CommentHandler {
 	}
 }
 
+// HandleCreateComment godoc
+// @Summary      Создать комментарий
+// @Description  Добавляет комментарий к посту (текст 1-250 символов)
+// @Tags         comments
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        post_id  path  int              true  "ID поста"
+// @Param        comment  body  dto.CommentDTO   true  "Текст комментария"
+// @Success      200  {object}  CommentIDResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /comment/create/{post_id} [post]
 func (h CommentHandler) HandleCreateComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var commentDTO dto.CommentDTO
@@ -60,6 +74,17 @@ func (h CommentHandler) HandleCreateComment(w http.ResponseWriter, r *http.Reque
 	utils.WriteJSON(w, map[string]int{"comment_id": commentID})
 }
 
+// HandleGetAllCommentsOnPost godoc
+// @Summary      Все комментарии поста
+// @Description  Возвращает список комментариев к посту
+// @Tags         comments
+// @Produce      json
+// @Security     BearerAuth
+// @Param        post_id  path  int  true  "ID поста"
+// @Success      200  {array}   dto.CommentDTO
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Router       /comment/all/{post_id} [get]
 func (h CommentHandler) HandleGetAllCommentsOnPost(w http.ResponseWriter, r *http.Request) {
 	postID, parseErr := strconv.Atoi(r.PathValue("post_id"))
 	if parseErr != nil {
@@ -76,6 +101,19 @@ func (h CommentHandler) HandleGetAllCommentsOnPost(w http.ResponseWriter, r *htt
 	utils.WriteJSON(w, dtos)
 }
 
+// HandleDeleteComment godoc
+// @Summary      Удалить комментарий
+// @Description  Удаляет комментарий (только автор)
+// @Tags         comments
+// @Produce      json
+// @Security     BearerAuth
+// @Param        comment_id  path  int  true  "ID комментария"
+// @Success      200  {object}  MessageResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      403  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /comment/{comment_id} [delete]
 func (h CommentHandler) HandleDeleteComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

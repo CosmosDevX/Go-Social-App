@@ -33,6 +33,19 @@ func NewAuthHandler(authService AuthService, rateLimiter redis_rate.Limiter) Aut
 	}
 }
 
+// HandleAuth godoc
+// @Summary      Авторизация / Регистрация
+// @Description  Логин пользователя. При успехе возвращает access_token и ставит refresh_token в HttpOnly cookie.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body      dto.UserDTO  true  "username + password"
+// @Success      200  {object}  AccessTokenResponse
+// @Failure      400  {object}  ErrorResponse  "VALIDATION_ERROR / DESERIALIZING_ERROR"
+// @Failure      401  {object}  ErrorResponse  "INVALID_PASSWORD / AUTH_ERROR"
+// @Failure      409  {object}  ErrorResponse  "UNIQUE_VIOLATION"
+// @Failure      429  {object}  ErrorResponse  "TOO_MANY_REQUESTS"
+// @Router       /auth [post]
 func (h AuthHandler) HandleAuth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	ip := r.RemoteAddr
@@ -72,6 +85,14 @@ func (h AuthHandler) HandleAuth(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, map[string]string{"access_token": authResult.AccessToken})
 }
 
+// HandleRefresh godoc
+// @Summary      Обновление access token
+// @Description  Берёт refresh_token из cookie и выдаёт новый access_token + новый refresh_token
+// @Tags         auth
+// @Produce      json
+// @Success      200  {object}  AccessTokenResponse
+// @Failure      401  {object}  ErrorResponse  "INVALID_TOKEN / REFRESH_TOKEN_ERROR"
+// @Router       /refresh [post]
 func (h AuthHandler) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -92,6 +113,15 @@ func (h AuthHandler) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, map[string]string{"access_token": authResult.AccessToken})
 }
 
+// HandleLogout godoc
+// @Summary      Выход из системы
+// @Description  Инвалидирует refresh token текущего пользователя
+// @Tags         auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  MessageResponse
+// @Failure      401  {object}  ErrorResponse
+// @Router       /logout [post]
 func (h AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

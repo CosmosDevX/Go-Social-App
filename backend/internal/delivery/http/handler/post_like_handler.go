@@ -24,6 +24,18 @@ func NewPostLikeHandler(postLikeService PostLikeService) PostLikeHandler {
 	}
 }
 
+// HandleLikePost godoc
+// @Summary      Поставить лайк
+// @Description  Ставит лайк посту. Возвращает актуальное количество лайков.
+// @Tags         likes
+// @Produce      json
+// @Security     BearerAuth
+// @Param        post_id  path  int  true  "ID поста"
+// @Success      200  {object}  LikesResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /post/like/{post_id} [post]
 func (h PostLikeHandler) HandleLikePost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -48,6 +60,18 @@ func (h PostLikeHandler) HandleLikePost(w http.ResponseWriter, r *http.Request) 
 	utils.WriteJSON(w, map[string]int{"likes": likes})
 }
 
+// HandleDislikePost godoc
+// @Summary      Убрать лайк
+// @Description  Убирает лайк с поста. Возвращает актуальное количество лайков.
+// @Tags         likes
+// @Produce      json
+// @Security     BearerAuth
+// @Param        post_id  path  int  true  "ID поста"
+// @Success      200  {object}  LikesResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /post/dislike/{post_id} [post]
 func (h PostLikeHandler) HandleDislikePost(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

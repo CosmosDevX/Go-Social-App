@@ -19,7 +19,27 @@ import (
 	"time"
 
 	"github.com/go-redis/redis_rate/v10"
+	httpSwagger "github.com/swaggo/http-swagger"
+
+	_ "myapp/docs"
+	_ "myapp/internal/delivery/http/handler"
 )
+
+// @title           My Social web API
+// @version         1.0
+// @description     Backend API для социальной сети (посты, комментарии, лайки, аутентификаация)
+// @termsOfService  http://swagger.io/terms/
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT access token.
 
 func main() {
 	cfg := config.Config{}
@@ -74,28 +94,34 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /auth", authHandler.HandleAuth)
-	mux.HandleFunc("POST /refresh", authHandler.HandleRefresh)
-	mux.HandleFunc("POST /logout", authMiddleware.Protect(authHandler.HandleLogout))
+	mux.HandleFunc("POST /api/auth", authHandler.HandleAuth)
+	mux.HandleFunc("POST /api/refresh", authHandler.HandleRefresh)
+	mux.HandleFunc("POST /api/logout", authMiddleware.Protect(authHandler.HandleLogout))
 
-	mux.HandleFunc("POST /user/create", userHandler.HandleCreateUser)
-	mux.HandleFunc("GET /user/get_username_by_id/{user_id}", userHandler.HandleGetUsernameByID)
-	mux.HandleFunc("GET /user/current/profile", authMiddleware.Protect(userHandler.HandleCurrentUserProfile))
+	mux.HandleFunc("POST /api/user/create", userHandler.HandleCreateUser)
+	mux.HandleFunc("GET /api/user/get_username_by_id/{user_id}", userHandler.HandleGetUsernameByID)
+	mux.HandleFunc("GET /api/user/current/profile", authMiddleware.Protect(userHandler.HandleCurrentUserProfile))
 
-	mux.HandleFunc("POST /post/create", authMiddleware.Protect(postHandler.HandleCreatePost))
-	mux.HandleFunc("DELETE /post/{post_id}", authMiddleware.Protect(postHandler.HandleDeletePost))
-	mux.HandleFunc("GET /post/current_user/all", authMiddleware.Protect(postHandler.HandleGetCurrentUserPosts))
-	mux.HandleFunc("GET /post/{username}/all", authMiddleware.Protect(postHandler.HandleGetUserPostsByUsername))
-	mux.HandleFunc("GET /post/feed", authMiddleware.Protect(postHandler.HandleGetPostFeed))
+	mux.HandleFunc("POST /api/post/create", authMiddleware.Protect(postHandler.HandleCreatePost))
+	mux.HandleFunc("DELETE /api/post/{post_id}", authMiddleware.Protect(postHandler.HandleDeletePost))
+	mux.HandleFunc("GET /api/post/current_user/all", authMiddleware.Protect(postHandler.HandleGetCurrentUserPosts))
+	mux.HandleFunc("GET /api/post/{username}/all", authMiddleware.Protect(postHandler.HandleGetUserPostsByUsername))
+	mux.HandleFunc("GET /api/post/feed", authMiddleware.Protect(postHandler.HandleGetPostFeed))
 
-	mux.HandleFunc("POST /post/like/{post_id}", authMiddleware.Protect(postLikeHandler.HandleLikePost))
-	mux.HandleFunc("POST /post/dislike/{post_id}", authMiddleware.Protect(postLikeHandler.HandleDislikePost))
+	mux.HandleFunc("POST /api/post/like/{post_id}", authMiddleware.Protect(postLikeHandler.HandleLikePost))
+	mux.HandleFunc("POST /api/post/dislike/{post_id}", authMiddleware.Protect(postLikeHandler.HandleDislikePost))
 
-	mux.HandleFunc("POST /comment/create/{post_id}", authMiddleware.Protect(commentHandler.HandleCreateComment))
-	mux.HandleFunc("GET /comment/all/{post_id}", authMiddleware.Protect(commentHandler.HandleGetAllCommentsOnPost))
-	mux.HandleFunc("DELETE /comment/{comment_id}", authMiddleware.Protect(commentHandler.HandleDeleteComment))
+	mux.HandleFunc("POST /api/comment/create/{post_id}", authMiddleware.Protect(commentHandler.HandleCreateComment))
+	mux.HandleFunc("GET /api/comment/all/{post_id}", authMiddleware.Protect(commentHandler.HandleGetAllCommentsOnPost))
+	mux.HandleFunc("DELETE /api/comment/{comment_id}", authMiddleware.Protect(commentHandler.HandleDeleteComment))
 
-	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+	mux.Handle("/swagger/", httpSwagger.Handler(
+		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("list"),
+	))
+
+	mux.Handle("/api/uploads/", http.StripPrefix("/api/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	handlerChain := http.TimeoutHandler(
 		middleware.LoggingMiddleware(
