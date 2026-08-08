@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"time"
+	"unicode/utf8"
 )
 
 type PostDTO struct {
@@ -19,11 +20,14 @@ type PostDTO struct {
 }
 
 func (dto PostDTO) Validate() error {
-	if len(dto.PostName) > 100 || len(dto.PostName) < 5 {
+	postNameLength := utf8.RuneCountInString(dto.PostName)
+	postDescriptionLength := utf8.RuneCountInString(dto.PostDescription)
+
+	if postNameLength > 100 || postNameLength < 5 {
 		return errors.New("post name cannot be bigger than 100 and lower than 5")
 	}
 
-	if len(dto.PostDescription) > 900 || len(dto.PostDescription) < 1 {
+	if postDescriptionLength > 900 || postDescriptionLength < 1 {
 		return errors.New("post description cannot be bigger than 900 and lower than 1")
 	}
 

@@ -1,3 +1,4 @@
+// Package logger
 package logger
 
 import (
@@ -14,9 +15,6 @@ const (
 	UserIDKey    contextKey = "user_id"
 )
 
-// Setup initializes the global slog logger.
-// format: "text" | "json" (default text)
-// level:  "debug" | "info" | "warn" | "error" (default info)
 func Setup(format, level string) *slog.Logger {
 	var lvl slog.Level
 	switch strings.ToLower(level) {
@@ -44,7 +42,6 @@ func Setup(format, level string) *slog.Logger {
 	return logger
 }
 
-// FromContext returns a logger enriched with request_id and user_id from context (if present).
 func FromContext(ctx context.Context) *slog.Logger {
 	logger := slog.Default()
 
@@ -58,17 +55,14 @@ func FromContext(ctx context.Context) *slog.Logger {
 	return logger
 }
 
-// WithRequestID stores request_id in context.
 func WithRequestID(ctx context.Context, requestID string) context.Context {
 	return context.WithValue(ctx, RequestIDKey, requestID)
 }
 
-// WithUserID stores user_id in context.
 func WithUserID(ctx context.Context, userID int) context.Context {
 	return context.WithValue(ctx, UserIDKey, userID)
 }
 
-// RequestID extracts request_id from context.
 func RequestID(ctx context.Context) string {
 	if id, ok := ctx.Value(RequestIDKey).(string); ok {
 		return id

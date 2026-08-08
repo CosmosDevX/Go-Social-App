@@ -1,7 +1,10 @@
 // Package dto
 package dto
 
-import "errors"
+import (
+	"errors"
+	"unicode/utf8"
+)
 
 type UserDTO struct {
 	Username string `json:"username"`
@@ -9,11 +12,14 @@ type UserDTO struct {
 }
 
 func (dto UserDTO) Validate() error {
-	if len(dto.Username) > 60 || len(dto.Username) < 3 {
+	usernameLength := utf8.RuneCountInString(dto.Username)
+	passwordLength := utf8.RuneCountInString(dto.Password)
+
+	if usernameLength > 60 || usernameLength < 3 {
 		return errors.New("username cannot be bigger than 60 and lower than 3")
 	}
 
-	if len(dto.Password) > 100 || len(dto.Password) < 10 {
+	if passwordLength > 100 || passwordLength < 10 {
 		return errors.New("password cannot be bigger than 100 and lower than 10")
 	}
 
