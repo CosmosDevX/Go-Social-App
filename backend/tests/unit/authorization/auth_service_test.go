@@ -174,7 +174,6 @@ func TestAuthService_Refresh(t *testing.T) {
 			setup: func(rt *helpers.MockRefreshTokenRepository, jwt *helpers.MockJWTService) {
 				jwt.On("ParseToken", "old-refresh").Return(claims, nil)
 				rt.On("Get", "42", constants.TokenWhiteListPrefix, ctx).Return("old-refresh", nil)
-				rt.On("Get", "42", constants.TokenBlackListPrefix, ctx).Return("", nil)
 				jwt.On("GenerateToken", 42, "alice", constants.AccessTokenExpiresAt).Return("new-access", nil)
 				jwt.On("GenerateToken", 42, "alice", constants.RefreshTokenExpiresAt).Return("new-refresh", nil)
 				rt.On("Set", "42", "new-refresh", constants.TokenWhiteListPrefix, constants.RefreshTokenExpiresAt, ctx).Return(nil)
@@ -203,16 +202,6 @@ func TestAuthService_Refresh(t *testing.T) {
 			wantErrCode: constants.InvalidTokenError,
 		},
 		{
-			name:     "error: token is blacklisted",
-			oldToken: "old-refresh",
-			setup: func(rt *helpers.MockRefreshTokenRepository, jwt *helpers.MockJWTService) {
-				jwt.On("ParseToken", "old-refresh").Return(claims, nil)
-				rt.On("Get", "42", constants.TokenWhiteListPrefix, ctx).Return("old-refresh", nil)
-				rt.On("Get", "42", constants.TokenBlackListPrefix, ctx).Return("old-refresh", nil)
-			},
-			wantErrCode: constants.InvalidTokenError,
-		},
-		{
 			name:     "error: get from whitelist fails",
 			oldToken: "old-refresh",
 			setup: func(rt *helpers.MockRefreshTokenRepository, jwt *helpers.MockJWTService) {
@@ -225,25 +214,11 @@ func TestAuthService_Refresh(t *testing.T) {
 			wantErrCode: constants.FindError,
 		},
 		{
-			name:     "error: get from blacklist returns error (treated as invalid)",
-			oldToken: "old-refresh",
-			setup: func(rt *helpers.MockRefreshTokenRepository, jwt *helpers.MockJWTService) {
-				jwt.On("ParseToken", "old-refresh").Return(claims, nil)
-				rt.On("Get", "42", constants.TokenWhiteListPrefix, ctx).Return("old-refresh", nil)
-				rt.On("Get", "42", constants.TokenBlackListPrefix, ctx).Return("", &domain.DomainError{
-					Code:    constants.FindError,
-					Message: "redis error",
-				})
-			},
-			wantErrCode: constants.InvalidTokenError,
-		},
-		{
 			name:     "error: failed to store new refresh token",
 			oldToken: "old-refresh",
 			setup: func(rt *helpers.MockRefreshTokenRepository, jwt *helpers.MockJWTService) {
 				jwt.On("ParseToken", "old-refresh").Return(claims, nil)
 				rt.On("Get", "42", constants.TokenWhiteListPrefix, ctx).Return("old-refresh", nil)
-				rt.On("Get", "42", constants.TokenBlackListPrefix, ctx).Return("", nil)
 				jwt.On("GenerateToken", 42, "alice", constants.AccessTokenExpiresAt).Return("new-access", nil)
 				jwt.On("GenerateToken", 42, "alice", constants.RefreshTokenExpiresAt).Return("new-refresh", nil)
 				rt.On("Set", "42", "new-refresh", constants.TokenWhiteListPrefix, constants.RefreshTokenExpiresAt, ctx).
@@ -290,16 +265,6 @@ func TestAuthService_Logout(t *testing.T) {
 		wantErrCode string
 	}{
 		{
-			name:   "success: removes from whitelist and adds to blacklist",
-			userID: 42,
-			token:  "refresh-token",
-			setup: func(rt *helpers.MockRefreshTokenRepository) {
-				rt.On("Get", "42", constants.TokenWhiteListPrefix, ctx).Return("refresh-token", nil)
-				rt.On("Delete", "42", constants.TokenWhiteListPrefix, ctx).Return(nil)
-				rt.On("Set", "42", "refresh-token", constants.TokenBlackListPrefix, constants.RefreshTokenExpiresAt, ctx).Return(nil)
-			},
-		},
-		{
 			name:   "error: get from whitelist fails",
 			userID: 42,
 			token:  "refresh-token",
@@ -323,18 +288,6 @@ func TestAuthService_Logout(t *testing.T) {
 				})
 			},
 			wantErrCode: constants.DeleteError,
-		},
-		{
-			name:   "error: set to blacklist fails",
-			userID: 42,
-			token:  "refresh-token",
-			setup: func(rt *helpers.MockRefreshTokenRepository) {
-				rt.On("Get", "42", constants.TokenWhiteListPrefix, ctx).Return("refresh-token", nil)
-				rt.On("Delete", "42", constants.TokenWhiteListPrefix, ctx).Return(nil)
-				rt.On("Set", "42", "refresh-token", constants.TokenBlackListPrefix, constants.RefreshTokenExpiresAt, ctx).
-					Return(&domain.DomainError{Code: constants.SaveError, Message: "redis error"})
-			},
-			wantErrCode: constants.SaveError,
 		},
 	}
 

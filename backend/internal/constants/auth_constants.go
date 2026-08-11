@@ -11,5 +11,4 @@ const (
 	UsernameKey           = "username"
 
 	TokenWhiteListPrefix = ":tokensWhiteList"
-	TokenBlackListPrefix = ":tokensBlackList"
 )

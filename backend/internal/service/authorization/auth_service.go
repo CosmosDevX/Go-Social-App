@@ -61,7 +61,7 @@ func (s AuthService) Auth(ctx context.Context, userDTO dto.UserDTO) (*AuthResult
 		return nil, domainErr
 	}
 
-	if domainErr := s.refreshTokenRepository.Set(strconv.Itoa(int(user.ID)), authResult.RefreshToken, constants.TokenWhiteListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
+	if domainErr := s.refreshTokenRepository.Set(strconv.Itoa(user.ID), authResult.RefreshToken, constants.TokenWhiteListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
 		log.Error("auth failed: store refresh token", "username", userDTO.Username, "user_id", user.ID, "code", domainErr.Code)
 		return nil, domainErr
 	}
@@ -86,16 +86,6 @@ func (s AuthService) Refresh(ctx context.Context, oldRefreshToken string) (*Auth
 	}
 	if oldRefreshToken != dbRefreshToken {
 		log.Warn("refresh failed: token mismatch (possible reuse/theft)", "user_id", claims.UserID)
-		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "invalid refresh token"}
-	}
-
-	blacklistRefreshToken, domainErr := s.refreshTokenRepository.Get(strconv.Itoa(claims.UserID), constants.TokenBlackListPrefix, ctx)
-	if domainErr != nil {
-		log.Warn("refresh failed: blacklist lookup", "user_id", claims.UserID, "code", domainErr.Code)
-		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "error during get refresh token in blacklist"}
-	}
-	if blacklistRefreshToken == oldRefreshToken {
-		log.Warn("refresh failed: token blacklisted", "user_id", claims.UserID)
 		return nil, &domain.DomainError{Code: constants.InvalidTokenError, Message: "invalid refresh token"}
 	}
 
@@ -124,11 +114,6 @@ func (s AuthService) Logout(ctx context.Context, userID int, refreshToken string
 
 	if domainErr := s.refreshTokenRepository.Delete(strconv.Itoa(userID), constants.TokenWhiteListPrefix, ctx); domainErr != nil {
 		log.Error("logout failed: delete whitelist", "user_id", userID, "code", domainErr.Code)
-		return domainErr
-	}
-
-	if domainErr := s.refreshTokenRepository.Set(strconv.Itoa(userID), refreshToken, constants.TokenBlackListPrefix, constants.RefreshTokenExpiresAt, ctx); domainErr != nil {
-		log.Error("logout failed: add to blacklist", "user_id", userID, "code", domainErr.Code)
 		return domainErr
 	}
 

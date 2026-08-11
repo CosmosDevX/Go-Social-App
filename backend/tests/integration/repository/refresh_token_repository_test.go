@@ -49,14 +49,9 @@ func TestRefreshTokenRepository(t *testing.T) {
 		helpers.FlushRedis(t, client)
 
 		require.Nil(t, repo.Set("7", "white", constants.TokenWhiteListPrefix, time.Minute, ctx))
-		require.Nil(t, repo.Set("7", "black", constants.TokenBlackListPrefix, time.Minute, ctx))
 
 		w, err := repo.Get("7", constants.TokenWhiteListPrefix, ctx)
 		require.Nil(t, err)
 		assert.Equal(t, "white", w)
-
-		b, err := repo.Get("7", constants.TokenBlackListPrefix, ctx)
-		require.Nil(t, err)
-		assert.Equal(t, "black", b)
 	})
 }
