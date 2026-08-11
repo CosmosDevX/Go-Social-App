@@ -1,5 +1,7 @@
 package handler
 
+import "myapp/internal/delivery/http/dto"
+
 // ErrorResponse стандартная ошибка API
 type ErrorResponse struct {
 	Code    string `json:"code" example:"VALIDATION_ERROR"`
@@ -39,4 +41,11 @@ type LikesResponse struct {
 // UsernameResponse ответ с username
 type UsernameResponse struct {
 	Username string `json:"username" example:"john_doe"`
+}
+
+// PostsResponse ответ с постами пользователя(не лента)
+type PostsResponse struct {
+	Posts    []dto.PostDTO `json:"posts"`
+	Page     int           `json:"page" example:"1"`
+	PageSize int           `json:"page_size" example:"10"`
 }

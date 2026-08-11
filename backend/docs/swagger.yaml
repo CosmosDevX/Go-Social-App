@@ -82,6 +82,19 @@ definitions:
         example: 42
         type: integer
     type: object
+  handler.PostsResponse:
+    properties:
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 10
+        type: integer
+      posts:
+        items:
+          $ref: '#/definitions/dto.PostDTO'
+        type: array
+    type: object
   handler.UserIDResponse:
     properties:
       user_id:
@@ -325,9 +338,7 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/dto.PostDTO'
-            type: array
+            $ref: '#/definitions/handler.PostsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -391,9 +402,7 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/dto.PostDTO'
-            type: array
+            $ref: '#/definitions/handler.PostsResponse'
         "401":
           description: Unauthorized
           schema:

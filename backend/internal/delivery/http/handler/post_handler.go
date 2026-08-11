@@ -101,7 +101,7 @@ func (h PostHandler) HandleCreatePost(w http.ResponseWriter, r *http.Request) {
 // @Tags         posts
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200  {array}   dto.PostDTO
+// @Success      200  {object}  PostsResponse
 // @Failure      401  {object}  ErrorResponse
 // @Router       /post/current_user/all [get]
 func (h PostHandler) HandleGetCurrentUserPosts(w http.ResponseWriter, r *http.Request) {
@@ -139,7 +139,7 @@ func (h PostHandler) HandleGetCurrentUserPosts(w http.ResponseWriter, r *http.Re
 // @Produce      json
 // @Security     BearerAuth
 // @Param        username  path  string  true  "Username автора"
-// @Success      200  {array}   dto.PostDTO
+// @Success      200  {object}  PostsResponse
 // @Failure      401  {object}  ErrorResponse
 // @Failure      404  {object}  ErrorResponse
 // @Router       /post/{username}/all [get]

@@ -361,10 +361,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.PostDTO"
-                            }
+                            "$ref": "#/definitions/handler.PostsResponse"
                         }
                     },
                     "401": {
@@ -600,10 +597,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.PostDTO"
-                            }
+                            "$ref": "#/definitions/handler.PostsResponse"
                         }
                     },
                     "401": {
@@ -894,6 +888,25 @@ const docTemplate = `{
                 "post_id": {
                     "type": "integer",
                     "example": 42
+                }
+            }
+        },
+        "handler.PostsResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "posts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PostDTO"
+                    }
                 }
             }
         },
