@@ -25,15 +25,23 @@
 Бэкенд написан мной. Swagger и часть тестов — с помощью ИИ, код проверен вручную.  
 Изначально был GORM, позже миграция на SQLX.
 
-## Запуск
-1. Поднять PostgreSQL и Redis  
-2. Заполнить `.env` (пример — `.env.example`)  
-3. Применить миграции  
-4. `go run .` в `backend/`  
-5. Frontend: `npm install && npm run dev` в `frontend/`
+## Запуск через Docker
+## Требования: 
+- Docker 
+- Docker Compose v2
+
+Иметь в корне проекта .env файл
+Запуск контейнеров через Docker
+docker compose up --build -d
+
+Провести миграции
+for f in backend/migrations/*.up.sql; do
+  docker compose exec -T db psql -U aegis -d my_db < "$f"
+done
+
+фронтенд откроется на localhost:5173
 
 ## Планы
 - Rate limit на регистрацию
-- Обновление Swagger
 - Доработка/чистка части эндпоинтов
 - (далее) обновление регистрации

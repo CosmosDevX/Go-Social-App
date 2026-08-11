@@ -58,7 +58,7 @@ func main() {
 	slog.Info("starting application")
 
 	//initialize clients
-	redisClient := infrastructure.NewRedisClient()
+	redisClient := infrastructure.NewRedisClient(cfg.RedisAddres, cfg.RedisPassword)
 	sqlxClient := infrastructure.NewSQLxClient(cfg.DBConnectionString)
 
 	rateLimiter := redis_rate.NewLimiter(redisClient.GetClient())

@@ -12,11 +12,11 @@ type RedisClient struct {
 	client *redis.Client
 }
 
-func NewRedisClient() RedisClient {
+func NewRedisClient(redisAddres, redisPassword string) RedisClient {
 	return RedisClient{
 		client: redis.NewClient(&redis.Options{
-			Addr:        "localhost:6379",
-			Password:    "",
+			Addr:        redisAddres,
+			Password:    redisPassword,
 			DB:          0,
 			PoolSize:    10,
 			PoolTimeout: 30 * time.Second,
