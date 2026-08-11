@@ -14,8 +14,8 @@ import (
 
 type PostService interface {
 	CreatePost(ctx context.Context, postDTO dto.PostDTO, creatorID int, file multipart.File, header *multipart.FileHeader) (int, *domain.DomainError)
-	GetCurrentUserPosts(ctx context.Context, userID int) ([]dto.PostDTO, *domain.DomainError)
-	GetUserPostsByUsername(ctx context.Context, username string, currentUserID int) ([]dto.PostDTO, *domain.DomainError)
+	GetCurrentUserPosts(ctx context.Context, userID int, page int) ([]dto.PostDTO, *domain.DomainError)
+	GetUserPostsByUsername(ctx context.Context, username string, currentUserID int, page int) ([]dto.PostDTO, *domain.DomainError)
 	DeletePost(ctx context.Context, postID, userID int) *domain.DomainError
 	GetPostFeed(ctx context.Context, currentUserID int) ([]dto.PostDTO, *domain.DomainError)
 }
@@ -113,13 +113,23 @@ func (h PostHandler) HandleGetCurrentUserPosts(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	dtos, domainErr := h.postService.GetCurrentUserPosts(ctx, parsedUserID)
+	page, parseErr := strconv.Atoi(r.URL.Query().Get("page"))
+	if parseErr != nil {
+		utils.WriteError(w, *domain.NewParseError("error during parsing page number"))
+		return
+	}
+
+	dtos, domainErr := h.postService.GetCurrentUserPosts(ctx, parsedUserID, page)
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	utils.WriteJSON(w, dtos)
+	utils.WriteJSON(w, map[string]any{
+		"posts":     dtos,
+		"page":      page,
+		"page_size": len(dtos),
+	})
 }
 
 // HandleGetUserPostsByUsername godoc
@@ -142,13 +152,23 @@ func (h PostHandler) HandleGetUserPostsByUsername(w http.ResponseWriter, r *http
 		return
 	}
 
-	dtos, domainErr := h.postService.GetUserPostsByUsername(ctx, r.PathValue("username"), parsedUserID)
+	page, parseErr := strconv.Atoi(r.URL.Query().Get("page"))
+	if parseErr != nil {
+		utils.WriteError(w, *domain.NewParseError("error during parsing page number"))
+		return
+	}
+
+	dtos, domainErr := h.postService.GetUserPostsByUsername(ctx, r.PathValue("username"), parsedUserID, page)
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
 	}
 
-	utils.WriteJSON(w, dtos)
+	utils.WriteJSON(w, map[string]any{
+		"posts":     dtos,
+		"page":      page,
+		"page_size": len(dtos),
+	})
 }
 
 // HandleGetPostFeed godoc

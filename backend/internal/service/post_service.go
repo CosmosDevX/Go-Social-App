@@ -19,8 +19,8 @@ type CommentCounter interface {
 type PostRepository interface {
 	Create(ctx context.Context, postDTO dto.PostDTO) (int, *domain.DomainError)
 	GetByID(ctx context.Context, postID int) (*domain.Post, *domain.DomainError)
-	GetAllByID(ctx context.Context, userID int) ([]domain.Post, *domain.DomainError)
-	GetAllByUsername(ctx context.Context, username string) ([]domain.Post, *domain.DomainError)
+	GetAllByID(ctx context.Context, userID int, offsetStep int) ([]domain.Post, *domain.DomainError)
+	GetAllByUsername(ctx context.Context, username string, offsetStep int) ([]domain.Post, *domain.DomainError)
 	DeletePost(ctx context.Context, postID, userID int) *domain.DomainError
 	GetPostFeed(ctx context.Context) ([]domain.Post, *domain.DomainError)
 	GetImageName(ctx context.Context, postID int) (string, *domain.DomainError)
@@ -120,8 +120,8 @@ func (s PostService) GetPostByID(ctx context.Context, postID int) (*dto.PostDTO,
 	return &dto, nil
 }
 
-func (s PostService) GetCurrentUserPosts(ctx context.Context, userID int) ([]dto.PostDTO, *domain.DomainError) {
-	posts, domainErr := s.postRepository.GetAllByID(ctx, userID)
+func (s PostService) GetCurrentUserPosts(ctx context.Context, userID int, page int) ([]dto.PostDTO, *domain.DomainError) {
+	posts, domainErr := s.postRepository.GetAllByID(ctx, userID, page)
 	if domainErr != nil {
 		return nil, domainErr
 	}
@@ -139,8 +139,8 @@ func (s PostService) GetCurrentUserPosts(ctx context.Context, userID int) ([]dto
 	return dtos, nil
 }
 
-func (s PostService) GetUserPostsByUsername(ctx context.Context, username string, currentUserID int) ([]dto.PostDTO, *domain.DomainError) {
-	posts, err := s.postRepository.GetAllByUsername(ctx, username)
+func (s PostService) GetUserPostsByUsername(ctx context.Context, username string, currentUserID int, page int) ([]dto.PostDTO, *domain.DomainError) {
+	posts, err := s.postRepository.GetAllByUsername(ctx, username, page)
 	if err != nil {
 		return nil, err
 	}

@@ -57,7 +57,7 @@ func TestPostRepository(t *testing.T) {
 		helpers.CreateTestPost(t, db, "Post A", "desc A", user.ID, "")
 		helpers.CreateTestPost(t, db, "Post B", "desc B", user.ID, "pic.png")
 
-		posts, err := repo.GetAllByID(ctx, user.ID)
+		posts, err := repo.GetAllByID(ctx, user.ID, 1)
 		require.Nil(t, err)
 		assert.Len(t, posts, 2)
 		assert.Equal(t, "owner", posts[0].CreatorUsername)
@@ -68,7 +68,7 @@ func TestPostRepository(t *testing.T) {
 		user := helpers.CreateTestUser(t, db, "nameduser", "password1234")
 		helpers.CreateTestPost(t, db, "Named post", "desc", user.ID, "")
 
-		posts, err := repo.GetAllByUsername(ctx, "nameduser")
+		posts, err := repo.GetAllByUsername(ctx, "nameduser", 1)
 		require.Nil(t, err)
 		assert.Len(t, posts, 1)
 		assert.Equal(t, "Named post", posts[0].PostName)
@@ -77,7 +77,7 @@ func TestPostRepository(t *testing.T) {
 	t.Run("GetAllByUsername empty result does not error", func(t *testing.T) {
 		helpers.TruncateAllTables(t, db)
 
-		posts, err := repo.GetAllByUsername(ctx, "nobody")
+		posts, err := repo.GetAllByUsername(ctx, "nobody", 1)
 		require.Nil(t, err)
 		assert.Empty(t, posts)
 	})

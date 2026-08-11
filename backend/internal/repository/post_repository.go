@@ -54,14 +54,22 @@ func (r PostRepository) GetByID(ctx context.Context, postID int) (*domain.Post, 
 	return &post, nil
 }
 
-func (r PostRepository) GetAllByID(ctx context.Context, userID int) ([]domain.Post, *domain.DomainError) {
+func (r PostRepository) GetAllByID(ctx context.Context, userID int, offsetStep int) ([]domain.Post, *domain.DomainError) {
 	query := `
 		SELECT p.*, u.username AS creator_username FROM posts p
 		LEFT JOIN users u ON p.creator_id = u.id	 
 		WHERE creator_id = $1
+		LIMIT 10 OFFSET $2
 	`
+	var offset int
+	if offsetStep == 1 {
+		offset = 0
+	} else {
+		offset = 10 * offsetStep
+	}
+
 	var posts []domain.Post
-	err := r.db.SelectContext(ctx, &posts, query, userID)
+	err := r.db.SelectContext(ctx, &posts, query, userID, offset)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -73,14 +81,22 @@ func (r PostRepository) GetAllByID(ctx context.Context, userID int) ([]domain.Po
 	return posts, nil
 }
 
-func (r PostRepository) GetAllByUsername(ctx context.Context, username string) ([]domain.Post, *domain.DomainError) {
+func (r PostRepository) GetAllByUsername(ctx context.Context, username string, offsetStep int) ([]domain.Post, *domain.DomainError) {
 	query := `
 		SELECT p.*, u.username AS creator_username FROM posts p
 		LEFT JOIN users u ON p.creator_id = u.id
 		WHERE u.username = $1
+		LIMIT 10 OFFSET $2
 	`
+	var offset int
+	if offsetStep == 1 {
+		offset = 0
+	} else {
+		offset = 10 * offsetStep
+	}
+
 	var posts []domain.Post
-	err := r.db.SelectContext(ctx, &posts, query, username)
+	err := r.db.SelectContext(ctx, &posts, query, username, offset)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}

@@ -72,13 +72,23 @@ export async function deletePost(postId: number): Promise<{ message: string }> {
   return data
 }
 
-export async function getCurrentUserPosts(): Promise<Post[]> {
-  const { data } = await api.get<Post[]>('/post/current_user/all')
+export interface PostsPage {
+  page: number
+  page_size: number
+  posts: Post[]
+}
+
+export async function getCurrentUserPosts(page = 1): Promise<PostsPage> {
+  const { data } = await api.get<PostsPage>('/post/current_user/all', {
+    params: { page },
+  })
   return data
 }
 
-export async function getUserPostsByUsername(username: string): Promise<Post[]> {
-  const { data } = await api.get<Post[]>(`/post/${username}/all`)
+export async function getUserPostsByUsername(username: string, page = 1): Promise<PostsPage> {
+  const { data } = await api.get<PostsPage>(`/post/${username}/all`, {
+    params: { page },
+  })
   return data
 }
 

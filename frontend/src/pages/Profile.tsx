@@ -11,10 +11,17 @@ export function Profile() {
   const { username: currentUsername, isAuthenticated } = useAuth()
 
   const [posts, setPosts] = useState<Post[]>([])
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const isOwnProfile = isAuthenticated && paramUsername === currentUsername
+
+  // при смене пользователя — сброс на первую страницу
+  useEffect(() => {
+    setPage(1)
+  }, [paramUsername])
 
   useEffect(() => {
     if (!paramUsername) return
@@ -25,18 +32,20 @@ export function Profile() {
 
     const load = async () => {
       try {
-        let data: Post[]
-        if (isOwnProfile) {
-          data = await getCurrentUserPosts()
-        } else {
-          data = await getUserPostsByUsername(paramUsername)
-        }
+        const data = isOwnProfile
+          ? await getCurrentUserPosts(page)
+          : await getUserPostsByUsername(paramUsername, page)
+
         if (!cancelled) {
-          setPosts(data)
+          setPosts(data.posts ?? [])
+          setPageSize(data.page_size || 10)
+          // если бэк вернул page — синхронизируем
+          if (data.page && data.page !== page) {
+            setPage(data.page)
+          }
         }
       } catch (err) {
         if (!cancelled) {
-          // NotFound = у пользователя нет постов — это нормально
           if (isNotFoundError(err)) {
             setPosts([])
             setError(null)
@@ -54,7 +63,7 @@ export function Profile() {
     return () => {
       cancelled = true
     }
-  }, [paramUsername, isOwnProfile])
+  }, [paramUsername, isOwnProfile, page])
 
   const handleLikeChange = (postId: number, likes: number, isLiked: boolean) => {
     setPosts((prev) =>
@@ -67,6 +76,10 @@ export function Profile() {
   const handlePostDelete = (postId: number) => {
     setPosts((prev) => prev.filter((p) => p.post_id !== postId))
   }
+
+  // has_more: на странице пришло полный page_size → скорее всего есть ещё
+  const hasNext = posts.length >= pageSize
+  const hasPrev = page > 1
 
   if (!paramUsername) {
     return (
@@ -99,8 +112,11 @@ export function Profile() {
       {/* Posts */}
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white/80">
-          Посты {posts.length > 0 && <span className="text-white/40 font-normal">({posts.length})</span>}
+          Посты
         </h2>
+        {!loading && posts.length > 0 && (
+          <span className="text-sm text-white/40">Страница {page}</span>
+        )}
       </div>
 
       {loading ? (
@@ -118,28 +134,65 @@ export function Profile() {
         <div className="glass p-12 text-center">
           <div className="text-4xl mb-3 opacity-50">🪐</div>
           <p className="text-white/50">
-            {isOwnProfile
-              ? 'У тебя пока нет постов. Создай первый!'
-              : 'У этого пользователя пока нет постов'}
+            {page > 1
+              ? 'На этой странице постов нет'
+              : isOwnProfile
+                ? 'У тебя пока нет постов. Создай первый!'
+                : 'У этого пользователя пока нет постов'}
           </p>
-          {isOwnProfile && (
-            <Link to="/create" className="btn-primary inline-block mt-5 text-sm">
-              Создать пост
-            </Link>
+          {page > 1 ? (
+            <button
+              type="button"
+              className="btn-ghost border border-white/10 mt-5 text-sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              ← Предыдущая страница
+            </button>
+          ) : (
+            isOwnProfile && (
+              <Link to="/create" className="btn-primary inline-block mt-5 text-sm">
+                Создать пост
+              </Link>
+            )
           )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <PostCard
-              key={post.post_id}
-              post={post}
-              authorUsername={paramUsername}
-              onLikeChange={handleLikeChange}
-              onPostDelete={handlePostDelete}
-            />
-          ))}
-        </div>
+        <>
+          <div className="space-y-4">
+            {posts.map((post) => (
+              <PostCard
+                key={post.post_id}
+                post={post}
+                authorUsername={paramUsername}
+                onLikeChange={handleLikeChange}
+                onPostDelete={handlePostDelete}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              className="btn-ghost border border-white/10 text-sm px-4 py-2 disabled:opacity-30 disabled:cursor-not-allowed"
+              disabled={!hasPrev || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              ← Предыдущая
+            </button>
+            <span className="text-sm text-white/50 min-w-[5rem] text-center">
+              {page}
+            </span>
+            <button
+              type="button"
+              className="btn-ghost border border-white/10 text-sm px-4 py-2 disabled:opacity-30 disabled:cursor-not-allowed"
+              disabled={!hasNext || loading}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Следующая →
+            </button>
+          </div>
+        </>
       )}
     </div>
   )
