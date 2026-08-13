@@ -36,7 +36,7 @@ docker compose up --build -d
 
 Провести миграции
 for f in backend/migrations/*.up.sql; do
-  docker compose exec -T db psql -U aegis -d my_db < "$f"
+  docker compose exec -T db psql -U user -d my_db < "$f"
 done
 
 фронтенд откроется на localhost:5173
