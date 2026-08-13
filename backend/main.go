@@ -84,7 +84,7 @@ func main() {
 
 	//initialize handlers
 	authHandler := handler.NewAuthHandler(authService, *rateLimiter)
-	userHandler := handler.NewUserHandler(userService)
+	userHandler := handler.NewUserHandler(userService, *rateLimiter)
 	postHandler := handler.NewPostHandler(postService)
 	postLikeHandler := handler.NewPostLikeHandler(postLikeService)
 	commentHandler := handler.NewCommentHandler(commentService)

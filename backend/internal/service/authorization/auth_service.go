@@ -104,7 +104,7 @@ func (s AuthService) Refresh(ctx context.Context, oldRefreshToken string) (*Auth
 	return authResult, nil
 }
 
-func (s AuthService) Logout(ctx context.Context, userID int, refreshToken string) *domain.DomainError {
+func (s AuthService) Logout(ctx context.Context, userID int) *domain.DomainError {
 	log := logger.FromContext(ctx)
 
 	if _, domainErr := s.refreshTokenRepository.Get(strconv.Itoa(userID), constants.TokenWhiteListPrefix, ctx); domainErr != nil {

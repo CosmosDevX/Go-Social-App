@@ -18,7 +18,7 @@ import (
 type AuthService interface {
 	Auth(ctx context.Context, userDTO dto.UserDTO) (*authorization.AuthResult, *domain.DomainError)
 	Refresh(ctx context.Context, oldRefreshToken string) (*authorization.AuthResult, *domain.DomainError)
-	Logout(ctx context.Context, userID int, refreshToken string) *domain.DomainError
+	Logout(ctx context.Context, userID int) *domain.DomainError
 }
 
 type AuthHandler struct {
@@ -34,7 +34,7 @@ func NewAuthHandler(authService AuthService, rateLimiter redis_rate.Limiter) Aut
 }
 
 // HandleAuth godoc
-// @Summary      Авторизация / Регистрация
+// @Summary      Аутентификация
 // @Description  Логин пользователя. При успехе возвращает access_token и ставит refresh_token в HttpOnly cookie.
 // @Tags         auth
 // @Accept       json
@@ -137,10 +137,18 @@ func (h AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if domainErr := h.authService.Logout(ctx, userID, tokenCookie.Value); domainErr != nil {
+	if domainErr := h.authService.Logout(ctx, userID); domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
 	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     constants.RefreshTokenKey,
+		Value:    "",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
 
 	utils.WriteJSON(w, map[string]string{"message": "logout successful"})
 }

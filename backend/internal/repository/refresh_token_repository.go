@@ -22,7 +22,7 @@ func NewRefreshTokenRepository(redisClient *redis.Client) RefreshTokenRepository
 }
 
 func (r RefreshTokenRepository) Set(userID, refreshToken, prefix string, ttl time.Duration, ctx context.Context) *domain.DomainError {
-	err := r.redisClient.Set(ctx, userID+prefix, refreshToken, ttl).Err() //TODO: Make constant for prefix
+	err := r.redisClient.Set(ctx, userID+prefix, refreshToken, ttl).Err()
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -34,7 +34,7 @@ func (r RefreshTokenRepository) Set(userID, refreshToken, prefix string, ttl tim
 }
 
 func (r RefreshTokenRepository) Delete(userID, prefix string, ctx context.Context) *domain.DomainError {
-	err := r.redisClient.Del(ctx, userID+prefix).Err() //TODO: Make constant for prefix
+	err := r.redisClient.Del(ctx, userID+prefix).Err()
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			return &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -46,7 +46,7 @@ func (r RefreshTokenRepository) Delete(userID, prefix string, ctx context.Contex
 }
 
 func (r RefreshTokenRepository) Get(userID, prefix string, ctx context.Context) (string, *domain.DomainError) {
-	cmd := r.redisClient.Get(ctx, userID+prefix) //TODO: Make constant for prefix
+	cmd := r.redisClient.Get(ctx, userID+prefix)
 	if cmd.Err() != nil {
 		if errors.Is(cmd.Err(), context.DeadlineExceeded) {
 			return "", &domain.DomainError{Code: constants.RequestTimeout, Message: "request timeout"}
@@ -54,7 +54,7 @@ func (r RefreshTokenRepository) Get(userID, prefix string, ctx context.Context) 
 		if errors.Is(cmd.Err(), redis.Nil) {
 			return "", nil
 		}
-		return "", &domain.DomainError{Code: constants.FindError, Message: "no matches found for this username"}
+		return "", &domain.DomainError{Code: constants.FindError, Message: "no matches found for this userID"}
 	}
 
 	return cmd.Val(), nil

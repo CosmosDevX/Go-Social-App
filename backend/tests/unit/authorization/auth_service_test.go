@@ -297,7 +297,7 @@ func TestAuthService_Logout(t *testing.T) {
 			tt.setup(rt)
 
 			svc := authorization.NewAuthService(nil, rt, nil)
-			domainErr := svc.Logout(ctx, tt.userID, tt.token)
+			domainErr := svc.Logout(ctx, tt.userID)
 
 			if tt.wantErrCode != "" {
 				require.NotNil(t, domainErr)

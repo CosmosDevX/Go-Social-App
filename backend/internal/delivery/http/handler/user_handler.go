@@ -2,11 +2,15 @@ package handler
 
 import (
 	"context"
+	"fmt"
+	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/domain"
 	"myapp/internal/utils"
 	"net/http"
+
+	"github.com/go-redis/redis_rate/v10"
 )
 
 type UserService interface {
@@ -17,11 +21,13 @@ type UserService interface {
 
 type UserHandler struct {
 	userService UserService
+	rateLimiter redis_rate.Limiter
 }
 
-func NewUserHandler(userService UserService) UserHandler {
+func NewUserHandler(userService UserService, rateLimiter redis_rate.Limiter) UserHandler {
 	return UserHandler{
 		userService: userService,
+		rateLimiter: rateLimiter,
 	}
 }
 
@@ -37,6 +43,8 @@ func NewUserHandler(userService UserService) UserHandler {
 // @Failure      409  {object}  ErrorResponse  "UNIQUE_VIOLATION"
 // @Router       /user/create [post]
 func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	var userDTO dto.UserDTO
 	if err := utils.Deserialize(r.Body, &userDTO); err != nil {
 		utils.WriteError(w, *domain.NewDeserializingError("error during deserializing user"))
@@ -49,7 +57,21 @@ func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, domainErr := h.userService.CreateUser(r.Context(), userDTO)
+	ip := r.RemoteAddr
+
+	res, err := h.rateLimiter.Allow(ctx, "create_user:"+ip, redis_rate.PerHour(4))
+	if err != nil {
+		utils.WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests"))
+		return
+	}
+
+	if res.Allowed == 0 {
+		w.Header().Set("Retry-After", fmt.Sprintf("%.0f", res.RetryAfter.Seconds()))
+		utils.WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests. Try again later"))
+		return
+	}
+
+	id, domainErr := h.userService.CreateUser(ctx, userDTO)
 	if domainErr != nil {
 		utils.WriteError(w, *domainErr)
 		return
