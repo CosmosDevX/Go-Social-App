@@ -3,7 +3,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
@@ -48,17 +47,8 @@ func NewAuthHandler(authService AuthService, rateLimiter redis_rate.Limiter) Aut
 // @Router       /auth [post]
 func (h AuthHandler) HandleAuth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	ip := r.RemoteAddr
 
-	res, err := h.rateLimiter.Allow(ctx, "auth:"+ip, redis_rate.PerMinute(5))
-	if err != nil {
-		utils.WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests"))
-		return
-	}
-
-	if res.Allowed == 0 {
-		w.Header().Set("Retry-After", fmt.Sprintf("%.0f", res.RetryAfter.Seconds()))
-		utils.WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests. Try again later"))
+	if err := utils.ActivateRateLimiter(ctx, w, r, "auth", &h.rateLimiter, redis_rate.PerMinute(5)); err != nil {
 		return
 	}
 

@@ -2,8 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
-	"myapp/internal/constants"
 	"myapp/internal/delivery/http/dto"
 	"myapp/internal/delivery/http/middleware"
 	"myapp/internal/domain"
@@ -57,17 +55,7 @@ func (h UserHandler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ip := r.RemoteAddr
-
-	res, err := h.rateLimiter.Allow(ctx, "create_user:"+ip, redis_rate.PerHour(4))
-	if err != nil {
-		utils.WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests"))
-		return
-	}
-
-	if res.Allowed == 0 {
-		w.Header().Set("Retry-After", fmt.Sprintf("%.0f", res.RetryAfter.Seconds()))
-		utils.WriteError(w, *domain.NewDomainError(constants.TooManyRequests, "too many requests. Try again later"))
+	if err := utils.ActivateRateLimiter(ctx, w, r, "create_user", &h.rateLimiter, redis_rate.PerHour(4)); err != nil {
 		return
 	}
 

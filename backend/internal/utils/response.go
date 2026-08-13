@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"myapp/internal/domain"
+	"net"
 	"net/http"
 )
 
@@ -18,4 +19,13 @@ func WriteError(w http.ResponseWriter, domainErr domain.DomainError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(MapError(domainErr.Code))
 	json.NewEncoder(w).Encode(domainErr)
+}
+
+func GetIP(r *http.Request) string {
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+
+	return ip
 }
