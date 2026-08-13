@@ -63,7 +63,6 @@ Thumbs.db
 .rts2_cache_umd/
 .node_repl_history
 .yarn-integrity
-.env*
 .cache
 .parcel-cache
 .next
